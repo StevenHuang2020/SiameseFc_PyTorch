@@ -1,0 +1,1 @@
+ffmpeg -framerate 30 -i ./img_camera2/dstImg1/%06d.jpg -c:v libx264 -pix_fmt yuv420p img_camera2_1out.mp4
