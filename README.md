@@ -1,4 +1,4 @@
-# SiameseFc_PyTorh
+# SiameseFc_PyTorch
 Siamese FC network for object tracking.
 
 Res Dataset: MOT17-04-SDP UrL:https://motchallenge.net/data/MOT17/   
