@@ -31,7 +31,7 @@ def pathsFiles(dir,filter='',subFolder=False): #"cpp h txt jpg"
 def deleteFile(file_path):
     if os.path.exists(file_path):
         os.remove(file_path)        
-        
+
 def createPath(dirs):
     if not os.path.exists(dirs):
         os.makedirs(dirs)
@@ -51,17 +51,6 @@ def jointImage(img1,img2,hori=True):
         img[0:H, :] = img1
         img[H:, :] = img2
     return img
-
-'''
-def loadImg(file):
-    return cv2.imread(file, flags=cv2.IMREAD_COLOR) #skimage.io.imread(file)
-
-def writeImg(file,img):
-    cv2.imwrite(file, img)
-    
-def resizeImg(img,NewW,NewH):
-    return cv2.resize(img, (NewW,NewH), interpolation=cv2.INTER_CUBIC) #INTER_CUBIC INTER_NEAREST INTER_LINEAR INTER_AREA
-'''
 
 def JointImagePath():
     src1=r'E:\python\AI\yolo\darknet-master\video\png'
