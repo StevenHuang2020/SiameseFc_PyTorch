@@ -7,4 +7,5 @@ Code reference: https://github.com/huanglianghua/siamfc-pytorch
 ### Tracking effect
 |||
 |---|---|
-|<img src="res/combine/000001" width="200" height="200" />|<img src="res/combine/000001" width="200" height="200" />|
+|<img src="res/dstImg1/000001.jpg" width="480" height="270" />|<img src="res/dstImg1/000090.jpg" width="480" height="270" />|
+|<img src="res/dstImg1/000180.jpg" width="480" height="270" />|<img src="res/dstImg1/000300.jpg" width="480" height="270" />|
