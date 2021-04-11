@@ -7,7 +7,7 @@ from got10k.experiments import *
 
 from siamfc import TrackerSiamFC
 from commonPath import pathsFiles
-from imageRect import rectImages
+from imageRect import rectImages,createPath
 
 def getImageList(path=r'.\res\img'):
     imgs = [i for i in pathsFiles(path,'jpg')]
@@ -22,6 +22,16 @@ def writeBoxes(file,boxes):
 
 def genPredict():
     if 1:
+        path=r'.\data\OTB\Crossing\img'       
+        startRect = [205,151,17,50]
+        
+        saveBase = r'.\res\data\OTB\Crossing'
+        createPath(saveBase)
+        
+        dstPath = saveBase
+        boxFile = saveBase + '\\' + 'CrossingPredict.txt'
+        
+    elif 0:
         path=r'.\res\img_camera'
 
         # startRect = [370,409,91,247]
@@ -44,7 +54,7 @@ def genPredict():
         dstPath = path + '\\' + 'dstImg5'
         boxFile = path + '\\' + 'dstImg5.txt'
         
-    else:
+    elif 0:
         path=r'.\res\img_camera2'
 
         # startRect = [1363,392,74,227]
@@ -55,20 +65,23 @@ def genPredict():
         dstPath = path + '\\' + 'dstImg2'
         boxFile = path + '\\' + 'dstImg2.txt'
         
+    predictAll(path, startRect, dstPath, boxFile)
     
+    
+def predictAll(path, startRect, dstPath, boxFile):
     imgs = getImageList(path)
     #print(imgs,len(imgs))
     
     boxes, times = tracker.track(imgs, startRect, visualize=False) #x,y w,h
     print('boxes=',boxes,len(boxes))
     #print('times=',times,len(times))
-    
-    writeBoxes(boxFile , boxes)
+        
     rectImages(imgs,boxes, dstPath)
+    writeBoxes(boxFile , boxes)
     
     
 if __name__ == '__main__':
-    net_path = 'siamfc_alexnet_e50.pth'
+    net_path = 'siamfc_alexnet_e554.pth'
     tracker = TrackerSiamFC(net_path=net_path)
 
     if 0:
@@ -76,11 +89,5 @@ if __name__ == '__main__':
         e = ExperimentOTB(root_dir, version=2015)
         e.run(tracker)
         e.report([tracker.name])
-
-    #path=r'.\res\img'
-    #startRect = [281,137,87,275]
-    #boxes, times = tracker.track(imgs, startRect, visualize=False) #x,y w,h
-    #print('boxes=',boxes,len(boxes))
-    #print('times=',times,len(times))
     
     genPredict()

@@ -6,7 +6,7 @@ def rectangleImg(img,startPt,stopPt,color=(0,0,255),thickness=2):
     return cv2.rectangle(img, startPt, stopPt, color=color, thickness=thickness) 
 
 def cameraTracking():
-    net_path = 'siamfc_alexnet_e50.pth'
+    net_path = 'siamfc_alexnet_e554.pth'
     tracker = TrackerSiamFC(net_path=net_path)
 
     cap = cv2.VideoCapture(0) #set tracking target boundingbox, press enter

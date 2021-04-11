@@ -56,8 +56,8 @@ class TrackerSiamFC(Tracker):
         
         # load checkpoint if provided
         if net_path is not None:
-            self.net.load_state_dict(torch.load(
-                net_path, map_location=lambda storage, loc: storage))
+            #self.net.load_state_dict(torch.load(net_path, map_location=lambda storage, loc: storage))
+            self.net.load_state_dict(torch.load(net_path, map_location=lambda storage, loc: storage)['model_state_dict'])
         self.net = self.net.to(self.device)
 
         # setup criterion
@@ -76,6 +76,8 @@ class TrackerSiamFC(Tracker):
             1.0 / self.cfg.epoch_num)
         self.lr_scheduler = ExponentialLR(self.optimizer, gamma)
 
+        self.curEpoch = 0 #current epochs, continue training using
+        
     def parse_args(self, **kwargs):
         # default parameters
         cfg = {
@@ -94,7 +96,7 @@ class TrackerSiamFC(Tracker):
             'response_up': 16,
             'total_stride': 8,
             # train parameters
-            'epoch_num': 50,
+            'epoch_num': 3, #50,
             'batch_size': 8,
             'num_workers': 32,
             'initial_lr': 1e-2,
@@ -104,9 +106,18 @@ class TrackerSiamFC(Tracker):
             'r_pos': 16,
             'r_neg': 0}
         
+        #print('ultimate_lr=',cfg['ultimate_lr'])
         for key, val in kwargs.items():
+            #print('key=',key)
+            if key == 'ultimate_lr':
+                val = float(val)
+            elif key == 'epoch_num':
+                val = int(val) 
+                   
             if key in cfg:
                 cfg.update({key: val})
+                
+        print(cfg)
         return namedtuple('Config', cfg.keys())(**cfg)
     
     @torch.no_grad()
@@ -258,8 +269,7 @@ class TrackerSiamFC(Tracker):
         return loss.item()
 
     @torch.enable_grad()
-    def train_over(self, seqs, val_seqs=None,
-                   save_dir='pretrained'):
+    def train_over(self, seqs, val_seqs=None, save_dir='pretrained'):
         # set to train mode
         self.net.train()
 
@@ -287,23 +297,46 @@ class TrackerSiamFC(Tracker):
         
         # loop over epochs
         for epoch in range(self.cfg.epoch_num):
+            t = time.time()
             # update lr at each epoch
             self.lr_scheduler.step(epoch=epoch)
 
+            epoch = self.curEpoch + epoch
             # loop over dataloader
             for it, batch in enumerate(dataloader):
                 loss = self.train_step(batch, backward=True)
-                print('Epoch: {} [{}/{}] Loss: {:.5f}'.format(
-                    epoch + 1, it + 1, len(dataloader), loss))
-                sys.stdout.flush()
+                
+            #log = 'Epoch({}/{}):total({}) [{}/{}] Loss: {:.5f}'.format(epoch + 1 - self.curEpoch, self.cfg.epoch_num, epoch + 1, it + 1, len(dataloader), loss)
+            log = 'Epoch({}/{}):total({})[{}/{}],Loss:{:.5f}, run in {:.2f}s'.format(epoch + 1 - self.curEpoch, self.cfg.epoch_num, epoch + 1, it + 1, len(dataloader), loss, time.time()-t)
+            print(log)
+            self._writeLog(log + '\n')
+            sys.stdout.flush()
             
             # save checkpoint
-            if not os.path.exists(save_dir):
+            if epoch<300 or (epoch<1000 and epoch%100==0) or (epoch>1000 and epoch%300==0):
+                self.saveModel(epoch, loss, save_dir)
+              
+        self.saveModel(epoch, loss, save_dir)
+                
+    def saveModel(self, epoch, loss, save_dir):
+        if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
-            net_path = os.path.join(
-                save_dir, 'siamfc_alexnet_e%d.pth' % (epoch + 1))
-            torch.save(self.net.state_dict(), net_path)
-    
+                
+        net_path = os.path.join(save_dir, 'siamfc_alexnet_e%d.pth' % (epoch + 1))
+        
+        #print('dict=',self.net.state_dict())
+        # for key in self.net.state_dict():
+        #     print('key=', key)
+        
+        torch.save({
+        'epoch': epoch+1,
+        'model_state_dict': self.net.state_dict(),
+        'optimizer_state_dict': self.optimizer.state_dict(),
+        'loss': loss,
+        }, net_path)
+        
+        #torch.save(self.net.state_dict(), net_path)
+                
     def _create_labels(self, size):
         # skip if same sized labels already created
         if hasattr(self, 'labels') and self.labels.size() == size:
@@ -335,5 +368,25 @@ class TrackerSiamFC(Tracker):
 
         # convert to tensors
         self.labels = torch.from_numpy(labels).to(self.device).float()
-        
         return self.labels
+
+    def _writeLog(self, log):
+        logFile=r'log'
+        if not os.path.exists(logFile):
+            os.makedirs(logFile)
+        
+        logFile=logFile + '/' + 'log.txt'
+        with open(logFile,'a',newline='\n') as dstF:
+            dstF.write(log)
+            
+    def train_continue(self, modelFile, seqs, save_dir='pretrained'):     
+        checkpoint = torch.load(modelFile)
+        #for key in checkpoint:
+            #print('key=',key)
+            
+        self.net.load_state_dict(checkpoint['model_state_dict'])
+        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        self.curEpoch = checkpoint['epoch']
+        loss = checkpoint['loss']
+        print('current already epochs:',self.curEpoch,',Loss:', loss)
+        self.train_over(seqs, save_dir='pretrained')
