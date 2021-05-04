@@ -14,12 +14,12 @@ def getNewestModelCheckpoint(result_dir):
     file = os.path.join(result_dir, lists[-1])
     return file
 
-def newTrain(tracker,seqs):
+def newTrain(tracker,seqs, saveDir=r'./pretrained/'):
     print('New training start...')
-    tracker.train_over(seqs) #first training
+    tracker.train_over(seqs, save_dir=saveDir) #first training
     
-def continueTrain(tracker, seqs):
-    file = getNewestModelCheckpoint(r'./pretrained/')
+def continueTrain(tracker, seqs, saveDir=r'./pretrained/'):
+    file = getNewestModelCheckpoint(saveDir)
     print('Continue training start, last weights file:', file)
     tracker.train_continue(file, seqs) #continue training
     

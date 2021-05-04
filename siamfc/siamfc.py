@@ -13,11 +13,12 @@ from collections import namedtuple
 from torch.optim.lr_scheduler import ExponentialLR
 from torch.utils.data import DataLoader
 from got10k.trackers import Tracker
+import torchvision.models as models
 
 from . import ops
-from .backbones import AlexNetV1
+from .backbones import AlexNetV1,Con2Net,Con8Net
 from .heads import SiamFC
-from .losses import BalancedLoss
+from .losses import *
 from .datasets import Pair
 from .transforms import SiamFCTransforms
 
@@ -37,6 +38,20 @@ class Net(nn.Module):
         x = self.backbone(x)
         return self.head(z, x)
 
+''' #backbones
+resnet18 = models.resnet18()
+alexnet = models.alexnet()
+vgg16 = models.vgg16()
+squeezenet = models.squeezenet1_0()
+densenet = models.densenet161()
+inception = models.inception_v3(init_weights=True)
+googlenet = models.googlenet(init_weights=True)
+shufflenet = models.shufflenet_v2_x1_0()
+mobilenet = models.mobilenet_v2()
+resnext50_32x4d = models.resnext50_32x4d()
+wide_resnet50_2 = models.wide_resnet50_2()
+mnasnet = models.mnasnet1_0()
+'''
 
 class TrackerSiamFC(Tracker):
 
@@ -50,10 +65,13 @@ class TrackerSiamFC(Tracker):
 
         # setup model
         self.net = Net(
+            #backbone=models.resnet18(),
             backbone=AlexNetV1(),
+            #backbone=Con2Net(),
+            #backbone=Con8Net(),
             head=SiamFC(self.cfg.out_scale))
         ops.init_weights(self.net)
-        
+                
         # load checkpoint if provided
         if net_path is not None:
             #self.net.load_state_dict(torch.load(net_path, map_location=lambda storage, loc: storage))
@@ -61,8 +79,15 @@ class TrackerSiamFC(Tracker):
         self.net = self.net.to(self.device)
 
         # setup criterion
-        self.criterion = BalancedLoss()
-
+        #self.criterion = BalancedLoss()
+        self.criterion = FocalLoss()
+        
+        #define save weight file name
+        backboneName = type(self.net.backbone).__name__
+        lossName = type(self.criterion).__name__
+        self.saveWeightFileName = 'siamfc_' + backboneName + '_' + lossName + '_e'  #'siamfc_alexnet_e'
+        print('fileName=', self.saveWeightFileName)
+        
         # setup optimizer
         self.optimizer = optim.SGD(
             self.net.parameters(),
@@ -109,7 +134,7 @@ class TrackerSiamFC(Tracker):
         #print('ultimate_lr=',cfg['ultimate_lr'])
         for key, val in kwargs.items():
             #print('key=',key)
-            if key == 'ultimate_lr':
+            if key == 'ultimate_lr' or key == 'initial_lr':
                 val = float(val)
             elif key == 'epoch_num':
                 val = int(val) 
@@ -262,9 +287,9 @@ class TrackerSiamFC(Tracker):
             
             if backward:
                 # back propagation
-                self.optimizer.zero_grad()
+                #self.optimizer.zero_grad()
                 loss.backward()
-                self.optimizer.step()
+                #self.optimizer.step()
         
         return loss.item()
 
@@ -298,8 +323,11 @@ class TrackerSiamFC(Tracker):
         # loop over epochs
         for epoch in range(self.cfg.epoch_num):
             t = time.time()
+            
+            self.optimizer.zero_grad()
+            self.optimizer.step()
             # update lr at each epoch
-            self.lr_scheduler.step(epoch=epoch)
+            self.lr_scheduler.step() #epoch=epoch
 
             epoch = self.curEpoch + epoch
             # loop over dataloader
@@ -313,7 +341,7 @@ class TrackerSiamFC(Tracker):
             sys.stdout.flush()
             
             # save checkpoint
-            if epoch<300 or (epoch<1000 and epoch%100==0) or (epoch>1000 and epoch%300==0):
+            if epoch<100 or (epoch<1000 and epoch%100==0) or (epoch>1000 and epoch%300==0):
                 self.saveModel(epoch, loss, save_dir)
               
         self.saveModel(epoch, loss, save_dir)
@@ -322,7 +350,8 @@ class TrackerSiamFC(Tracker):
         if not os.path.exists(save_dir):
                 os.makedirs(save_dir)
                 
-        net_path = os.path.join(save_dir, 'siamfc_alexnet_e%d.pth' % (epoch + 1))
+        #net_path = os.path.join(save_dir, 'siamfc_alexnet_e%d.pth' % (epoch + 1))
+        net_path = os.path.join(save_dir, self.saveWeightFileName + '%d.pth' % (epoch + 1))
         
         #print('dict=',self.net.state_dict())
         # for key in self.net.state_dict():

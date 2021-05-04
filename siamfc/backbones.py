@@ -104,3 +104,70 @@ class AlexNetV3(_AlexNet):
         self.conv5 = nn.Sequential(
             nn.Conv2d(768, 512, 3, 1),
             _BatchNorm2d(512))
+
+
+######################## Steven Nets ##############################
+class Con2Net(nn.Module):
+    
+    def __init__(self, output=2):
+        """Sequential CNN classifier model.
+        output: xx
+        """
+        super(Con2Net, self).__init__()
+        
+        self.net = nn.Sequential(
+            nn.Conv2d(in_channels=3, out_channels=96, kernel_size=11,stride=2),
+            #nn.Dropout(0.5),
+            nn.BatchNorm2d(96),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(3, 2),
+            
+            nn.Conv2d(96, 16, kernel_size=3),
+            nn.BatchNorm2d(16),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(3, 2))
+
+    def forward(self, x):
+        return self.net(x)
+    
+class Con8Net(nn.Module):
+    
+    def __init__(self, output=2):
+        super(Con8Net, self).__init__()
+        
+        self.net = nn.Sequential(
+            nn.Conv2d(in_channels=3, out_channels=16, kernel_size=11,stride=2),
+            nn.BatchNorm2d(16),
+            nn.ReLU(inplace=True), nn.MaxPool2d(3, 2),
+            
+            nn.Conv2d(16, 32, kernel_size=3),
+            nn.BatchNorm2d(32),
+            nn.ReLU(inplace=True), nn.MaxPool2d(3, 2),
+            
+            nn.Conv2d(32, 48, kernel_size=3),
+            nn.BatchNorm2d(48),
+            nn.ReLU(inplace=True), #nn.MaxPool2d(3, 2),
+            
+            nn.Conv2d(48, 96, kernel_size=3),
+            nn.BatchNorm2d(96),
+            nn.ReLU(inplace=True), #nn.MaxPool2d(3, 2),
+            
+            nn.Conv2d(96, 128, kernel_size=3),
+            nn.BatchNorm2d(128),
+            nn.ReLU(inplace=True), #nn.MaxPool2d(3, 2),
+            
+            nn.Conv2d(128, 256, kernel_size=3),
+            nn.BatchNorm2d(256),
+            nn.ReLU(inplace=True), #nn.MaxPool2d(3, 2),
+            
+            nn.Conv2d(256, 384, kernel_size=3),
+            nn.BatchNorm2d(384),
+            nn.ReLU(inplace=True), #nn.MaxPool2d(3, 2),
+            
+            nn.Conv2d(384, 256, kernel_size=3),
+            nn.BatchNorm2d(256),
+            nn.ReLU(inplace=True), #nn.MaxPool2d(3, 2),
+            )
+
+    def forward(self, x):
+        return self.net(x)

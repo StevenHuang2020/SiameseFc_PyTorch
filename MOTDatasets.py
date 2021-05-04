@@ -42,7 +42,7 @@ class MOTDataset(object):
                 raise Exception('Sequence {} not found.'.format(index))
             index = self.seq_names.index(index)
 
-        img_files = 
+        img_files = sorted(glob.glob(os.path.join(self.seq_dirs[index], 'img/*.jpg')))
         anno = np.loadtxt(self.anno_files[index], delimiter=',')
         
         if (len(img_files) != len(anno)) or (anno.shape[1] != 4):

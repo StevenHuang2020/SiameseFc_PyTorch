@@ -16,6 +16,7 @@ def pathsFiles(dir,filter='',subFolder=False): #"cpp h txt jpg"
     fmts = filter.split()    
     if fmts:
         for dirpath, dirnames, filenames in os.walk(dir):
+            filenames.sort()
             for filename in filenames:
                 if getExtFile(getFmtFile(filename)) in fmts:
                     yield dirpath+'\\'+filename
@@ -23,6 +24,7 @@ def pathsFiles(dir,filter='',subFolder=False): #"cpp h txt jpg"
                 break
     else:
         for dirpath, dirnames, filenames in os.walk(dir):
+            filenames.sort()
             for filename in filenames:
                 yield dirpath+'\\'+filename  
             if not subFolder:
@@ -35,10 +37,22 @@ def deleteFile(file_path):
 def createPath(dirs):
     if not os.path.exists(dirs):
         os.makedirs(dirs)
-        
+
+def deleteFolder(file_path):
+    if os.path.exists(file_path):
+        #shutil.rmtree(file_path)
+        for lists in os.listdir(file_path):
+            f = os.path.join(file_path, lists)
+            if os.path.isfile(f):
+                os.remove(f)
+                       
 def getFileName(path):  
     return os.path.basename(path)
-    
+   
+def getFileNameNo(path):
+    base=os.path.basename(path)
+    return os.path.splitext(base)[0]
+ 
 def jointImage(img1,img2,hori=True):
     assert(img1.shape == img2.shape)
     H,W = img1.shape[0],img1.shape[1]

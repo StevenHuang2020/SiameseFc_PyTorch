@@ -1,25 +1,8 @@
 import cv2
 import os 
 
-def createPath(dirs):
-    if not os.path.exists(dirs):
-        os.makedirs(dirs)
-        
-def deleteFile(file_path):
-    if os.path.exists(file_path):
-        os.remove(file_path)
+from commonPath import getFileName  
 
-def deleteFolder(file_path):
-    if os.path.exists(file_path):
-        #shutil.rmtree(file_path)
-        for lists in os.listdir(file_path):
-            f = os.path.join(file_path, lists)
-            if os.path.isfile(f):
-                os.remove(f)
-                
-def getFileName(path):  
-    return os.path.basename(path)
-   
 def getImgHW(img):
     return img.shape[0],img.shape[1]
 
@@ -39,17 +22,41 @@ def resizeImg(img,NewW,NewH):
 def rectangleImg(img,startPt,stopPt,color=(0,0,255),thickness=2):
     return cv2.rectangle(img, startPt, stopPt, color=color, thickness=thickness) 
 
-def rectImages(imgs,boxes,dst):
-    deleteFolder(dst)
-    createPath(dst)
+def rectImages(imgs, boxes, dst, color, str, xoffset=0, yoffset=-5):
     for f,box in zip(imgs,boxes):
         img = loadImg(f)
         x0 = box[0]
         y0 = box[1]
         x1 = x0 + box[2]
         y1 = y0 + box[3]
-        img = rectangleImg(img,(int(x0),int(y0)),(int(x1),int(y1)))
+        img = rectangleImg(img,(int(x0),int(y0)),(int(x1),int(y1)), color=color)
+        
+        loc = (int(x0 + xoffset), int(y0 + yoffset))
+        img = textImg(img, str, loc=loc, color=color, fontScale=0.8)
         
         fDst = dst + '\\' + getFileName(f)
-        print(dst,getFileName(f),fDst)
+        #print(dst,getFileName(f),fDst)
         writeImg(img,fDst)
+   
+def textImg(img,str,loc=None,color=(0,0,0),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fontScale = 1,thickness = 1):
+    newImg = img.copy()
+    if loc is None:
+        textSize = cv2.getTextSize(str, fontFace, fontScale, thickness)
+        #print('textSize=',textSize)
+        H,W = getImgHW(img)
+        loc = ((W - textSize[0][0])//2, (H + textSize[0][1])//2)
+        
+    return cv2.putText(newImg, str,loc, fontFace, fontScale, color, thickness, cv2.LINE_AA)
+    #return cv2.putText(img, str,loc, fontFace, fontScale, color, thickness, cv2.LINE_AA) #color=BGR
+
+def showimage(img,str='image',autoSize=False):
+    flag = cv2.WINDOW_NORMAL
+    if autoSize:
+        flag = cv2.WINDOW_AUTOSIZE
+
+    cv2.namedWindow(str, flag)
+    cv2.imshow(str,img)
+
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    return
