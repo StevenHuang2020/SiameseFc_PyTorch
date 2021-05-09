@@ -6,20 +6,20 @@ Code reference: https://github.com/huanglianghua/siamfc-pytorch
 <br/>
 FC Siamese [paper.](https://arxiv.org/pdf/1606.09549.pdf)
 
-### Metrics
+## Metrics
  - IoU
- <img src="src/res/IoU.png" width="320" height="240" />
+ <img src="src/res/IoU.png" width="200" height="200" />
  
  - Precision
- <img src="src/res/precision.png" width="320" height="240" />
+ <img src="src/res/precision.png" width="200" height="200" />
  
 
-### IoU/Precision
+## IoU/Precision
 |||
 |---|---|
-|<img src="src/res/CPrecison.png" width="320" height="240" />|<img src="src/res/IoU.png" width="320" height="240" />|
+|<img src="src/res/PrecisonPlot.png" width="320" height="240" />|<img src="src/res/IoUPlot.png" width="320" height="240" />|
 
-### Tracking effect
+## Tracking effect
 |||
 |---|---|
 |<img src="src/res/dstImg1/000001.jpg" width="240" height="135" />|<img src="src/res/dstImg1/000090.jpg" width="240" height="135" />|
