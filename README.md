@@ -9,11 +9,11 @@ Code reference: https://github.com/huanglianghua/siamfc-pytorch
 FC Siamese network [paper.](https://arxiv.org/pdf/1606.09549.pdf)
 
 ## Metrics
- - IoU
- <img src="src/res/IoU.png" width="200" height="200" />
- <img src="https://latex.codecogs.com/svg.latex?Intersection%20over%20Union(IoU)%20=%20\frac{S_{gt}%20\bigcap%20S_{pred}%20}{S_{gt}%20\bigcup%20S_{pred}%20}" /> <br/>
+ - Intersection over Union(IoU)
+ <img src="src/res/IoU.png" width="150" height="150" />
+ <img src="https://latex.codecogs.com/svg.latex?IoU%20=%20\frac{S_{gt}%20\bigcap%20S_{pred}%20}{S_{gt}%20\bigcup%20S_{pred}%20}" /> <br/>
  - Precision
- <img src="src/res/precision.png" width="200" height="200" />
+ <img src="src/res/precision.png" width="150" height="150" />
  <img src="https://latex.codecogs.com/svg.latex?Distance=%20\sqrt{(x_{gt}-x_{pred})^2+(y_{gt}-y_{pred})^2}" /> <br/>
  
 
