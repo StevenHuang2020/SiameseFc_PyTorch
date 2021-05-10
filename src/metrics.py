@@ -173,7 +173,11 @@ def getIoUXY(iou,N=200):
     
     x = np.linspace(0,1,num=N)
     y = list(map(SuccessRate, [i for i in x]))
-    return x,y
+    
+    #AUC
+    auc = np.sum(np.array(y)/N)
+    #print(auc,type(auc))
+    return x,y,auc
 
 def getPrecisionXY(dis,N=200):    
     def Precision(k):
@@ -182,7 +186,9 @@ def getPrecisionXY(dis,N=200):
     
     x = np.linspace(0,50,num=N)
     y = list(map(Precision, [i for i in x]))
-    return x,y
+    iou = y[int(N*30/50)] #get iou when dis=30
+    print('y=', y, ' iou=', iou)
+    return x,y,iou
 
 def plotIOU(iou):
     def plotXY(x,y,name): #Success rate
@@ -196,7 +202,7 @@ def plotIOU(iou):
         plt.legend(loc='lower left')
         plt.show()
     
-    x,y = getIoUXY(iou)
+    x,y,_ = getIoUXY(iou)
     plotXY(x, y, 'Success plots of OPE')
     
 def plotPrecision(dis):
@@ -211,13 +217,13 @@ def plotPrecision(dis):
         plt.legend(loc='lower right')
         plt.show()
         
-    x,y = getPrecisionXY(dis)
+    x,y,_ = getPrecisionXY(dis)
     plotXY(x, y, 'Precision plots of OPE')
   
 ##################### MOT7 ###################
 def loadLines2Numpy(file):
     data = np.loadtxt(file)
-    print('data=', type(data), data.shape)
+    #print('data=', type(data), data.shape)
     return data
 
 def plotAllIoU():
@@ -233,20 +239,22 @@ def plotAllPrecision():
 def plotCompareIoU():
     base = r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN'
     iouFile1 = base + '\\IoU_alexnet_e754\\IoU.txt'
-    label1 = 'Siamese_Alexnet'
+    label1 = 'SiamFC_Alexnet'
     
     iouFile2 = base + '\\IoU_siamfc_Con2Net_BalancedLoss_e\\IoU.txt'
-    label2 = 'Siamese_Con2Net'
+    label2 = 'SiamFC_Con2Net'
 
     
     ax = plt.subplot(1,1,1)
     
-    x,y = getIoUXY(loadLines2Numpy(iouFile1))
+    x,y,auc = getIoUXY(loadLines2Numpy(iouFile1))
     plotSub(x, y, ax, label=label1, color='b')
+    print(label1, ' AUC=', auc)
     
-    x,y = getIoUXY(loadLines2Numpy(iouFile2))
+    x,y,auc = getIoUXY(loadLines2Numpy(iouFile2))
     plotSub(x, y, ax, label=label2, color='r', linestyle='dashed')
-
+    print(label2, ' AUC=', auc)
+    
     #plt.axis('square')
     plt.xlabel('Overlap threshold')
     plt.ylabel('Success rate')
@@ -255,26 +263,27 @@ def plotCompareIoU():
     plt.grid(linestyle='-.') #'-', '--', '-.', ':', '',
     plt.legend(loc='lower left')
     #plt.legend()
-    plt.savefig(r'.\res\IoU.png', dpi=300)
+    plt.savefig(r'.\res\IoUPlot.png', dpi=300)
     plt.show()
     
 def plotComparePrecision():
     base = r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN'
     disFile1 = base + '\\IoU_alexnet_e754\\dis.txt'
-    label1 = 'SiaFC_Alexnet'
+    label1 = 'SiamFC_Alexnet'
     
     disFile2 = base + '\\IoU_siamfc_Con2Net_BalancedLoss_e\\dis.txt'
-    label2 = 'SiaFC_Con2Net'
+    label2 = 'SiamFC_Con2Net'
 
-    
     ax = plt.subplot(1,1,1)
     
-    x,y = getPrecisionXY(loadLines2Numpy(disFile1))
+    x,y,iou = getPrecisionXY(loadLines2Numpy(disFile1))
     plotSub(x, y, ax, label=label1, color='b')
+    print(label1, 'final IoU=', iou)
     
-    x,y = getPrecisionXY(loadLines2Numpy(disFile2))
+    x,y,iou = getPrecisionXY(loadLines2Numpy(disFile2))
     plotSub(x, y, ax, label=label2, color='r', linestyle='dashed')
-
+    print(label2, 'final IoU=', iou)
+    
     #plt.axis('square')
     plt.xlabel('Location error threshold')
     plt.ylabel('Precision')
@@ -283,7 +292,7 @@ def plotComparePrecision():
     plt.grid(linestyle='-.') #'-', '--', '-.', ':', '',
     plt.legend(loc='lower right')
     #plt.legend()
-    plt.savefig(r'.\res\CPrecison.png', dpi=300)
+    plt.savefig(r'.\res\PrecisonPlot.png', dpi=300)
     plt.show()
 
 def getMOT_GTAndPredAll(trueFile, predictPath, IoUPath): #get Iou&Distance to one file from all predciton files
@@ -370,7 +379,9 @@ def main():
     #Tracking_All_MOT7()
     
     plotCompareIoU()
-    #plotComparePrecision()
+    plotComparePrecision()
+    
+    #getPrecisionXY(np.linspace(0,50,20))
     
 if __name__=="__main__":
     main()

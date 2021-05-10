@@ -22,6 +22,7 @@ from .losses import *
 from .datasets import Pair
 from .transforms import SiamFCTransforms
 
+from .progressBar import SimpleProgressBar
 
 __all__ = ['TrackerSiamFC']
 
@@ -68,8 +69,8 @@ class TrackerSiamFC(Tracker):
         # bk=AlexNetV1()
         # bk=Con2Net()
         # bk=Con8Net()
-        bk=models.vgg19().features; seqName = 'vgg19'
-        #bk=models.MobileNetV2().features; seqName = 'MobileNet'
+        # bk=models.vgg19().features; seqName = 'vgg19'
+        bk=models.MobileNetV2().features; seqName = 'MobileNet'
 
         self.net = Net(
             backbone=bk,
@@ -259,6 +260,7 @@ class TrackerSiamFC(Tracker):
         boxes[0] = box
         times = np.zeros(frame_num)
 
+        bar = SimpleProgressBar(total=frame_num, title='tracking images', width=30)
         for f, img_file in enumerate(img_files):
             img = ops.read_image(img_file)
 
@@ -272,6 +274,8 @@ class TrackerSiamFC(Tracker):
             if visualize:
                 ops.show_image(img, boxes[f, :])
 
+            bar.update(f+1)
+            
         return boxes, times
     
     def train_step(self, batch, backward=True):

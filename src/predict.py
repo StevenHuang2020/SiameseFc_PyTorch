@@ -194,7 +194,8 @@ def gen_predictAll(imgesPath,gtFilesPath,predPath):
         boxFile = predPath + '\\' + fileName + '_pred.txt'
         #print(imgs, 'boxFile=', boxFile, 'startRect=', startRect)
         
-        predictAll(imgs, startRect, boxFile)
+        if not os.path.exists(boxFile):
+            predictAll(imgs, startRect, boxFile)
         #break
         
 def genPredict_MOT17():
@@ -375,7 +376,8 @@ def visualTracker(tracker):
 if __name__ == '__main__':
     #net_path = r'.\pretrained\siamfc_alexnet_e754.pth'
     #net_path = r'.\pretrained\siamfc_Con2Net_BalancedLoss_e860.pth'
-    net_path = r'.\pretrained\siamfc_Sequential_vgg19_BalancedLoss_e801.pth'
+    #net_path = r'.\pretrained\siamfc_Sequential_vgg19_BalancedLoss_e801.pth'
+    net_path = r'.\pretrained\siamfc_Sequential_MobileNet_BalancedLoss_e601.pth'
     
     tracker = TrackerSiamFC(net_path=net_path)
     if 0:
@@ -388,7 +390,7 @@ if __name__ == '__main__':
     
     #genPredictAllObjs()
     #genPredict()        #gen predict one object boxes
-    #genPredict_MOT17() #gen predict boxes
+    genPredict_MOT17() #gen predict boxes
     
     #genBoxImg_MOT17()  #gen rect to images by predicted box files
     #genBoxImgCompare_MOT17()
