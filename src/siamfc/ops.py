@@ -32,6 +32,9 @@ def show_image(img, boxes=None, box_fmt='ltwh', colors=None,
                cvt_code=cv2.COLOR_RGB2BGR):
     if cvt_code is not None:
         img = cv2.cvtColor(img, cvt_code)
+    else:
+        img = np.array(img, dtype = np.uint8)
+        img = cv2.applyColorMap(img, cv2.COLORMAP_OCEAN) #cv2.COLORMAP_JET
     
     # resize img if necessary
     max_size = 960

@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
@@ -22,5 +23,6 @@ class SiamFC(nn.Module):
         nx, c, h, w = x.size()
         x = x.view(-1, nz * c, h, w)
         out = F.conv2d(x, z, groups=nz)
+        #out = torch.sigmoid(out)
         out = out.view(nx, -1, out.size(-2), out.size(-1))
         return out

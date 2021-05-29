@@ -30,7 +30,7 @@ def prepareData():
     seqs = MOTDataset(root_dir)
 
     # id = 0
-    # print('len=', len(seqs))
+    #print('traning data len=', len(seqs))
     # print('list=',len(seqs[id][0]), seqs[id][0])
     # print('anno=',seqs[id][1], seqs[id][1].shape)
     return seqs

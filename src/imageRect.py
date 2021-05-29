@@ -46,6 +46,12 @@ def textImg(img,str,loc=None,color=(0,0,0),fontFace=cv2.FONT_HERSHEY_SIMPLEX, fo
         H,W = getImgHW(img)
         loc = ((W - textSize[0][0])//2, (H + textSize[0][1])//2)
         
+    locShadow = list(loc) #add font black shadow
+    locShadow[0] = locShadow[0]+2
+    locShadow[1] = locShadow[1]+2
+    locShadow = tuple(locShadow)
+    newImg = cv2.putText(newImg, str,locShadow, fontFace, fontScale, (0,0,0), thickness, cv2.LINE_AA)
+        
     return cv2.putText(newImg, str,loc, fontFace, fontScale, color, thickness, cv2.LINE_AA)
     #return cv2.putText(img, str,loc, fontFace, fontScale, color, thickness, cv2.LINE_AA) #color=BGR
 

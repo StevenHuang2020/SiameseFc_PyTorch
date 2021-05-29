@@ -5,7 +5,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-__all__ = ['BalancedLoss', 'FocalLoss', 'GHMCLoss', 'OHNMLoss']
+__all__ = ['BalancedLoss', 'BCELoss', 'FocalLoss', 'GHMCLoss', 'OHNMLoss']
 
 
 def log_sigmoid(x):
@@ -23,7 +23,23 @@ def log_minus_sigmoid(x):
     return torch.clamp(-x, max=0) - torch.log(1 + torch.exp(-torch.abs(x))) + \
         0.5 * torch.clamp(x, min=0, max=0)
 
+class BCELoss(nn.Module):
 
+    def __init__(self):
+        super(BCELoss, self).__init__()
+          
+    def forward(self, input, target):
+        #print('input.shape=', input.shape, 'type=', type(input))
+        #print('target.shape=', target.shape, 'type=', type(target))
+        
+        #print('input=', input)
+        #print('target=', target)
+        
+        #input = torch.where(input > 0.5, 1, 0)
+        #target = torch.where(target > 0.5, 1, 0)
+        #return F.binary_cross_entropy(input, target)
+        return F.binary_cross_entropy_with_logits(input, target, reduction='mean')
+        
 class BalancedLoss(nn.Module):
 
     def __init__(self, neg_weight=1.0):
@@ -36,11 +52,16 @@ class BalancedLoss(nn.Module):
         pos_num = pos_mask.sum().float()
         neg_num = neg_mask.sum().float()
         weight = target.new_zeros(target.size())
-        weight[pos_mask] = 1 / pos_num
-        weight[neg_mask] = 1 / neg_num * self.neg_weight
-        weight /= weight.sum()
+        #weight[pos_mask] = 1 / pos_num
+        #weight[neg_mask] = 1 / neg_num * self.neg_weight
+        #weight /= weight.sum()
+        if pos_num>0:
+            weight[pos_mask] = 0.5 / pos_num
+        if neg_num>0:
+            weight[neg_mask] = 0.5 / neg_num
+
         return F.binary_cross_entropy_with_logits(
-            input, target, weight, reduction='sum')
+            input, target, weight, reduction='mean')
 
 
 class FocalLoss(nn.Module):
@@ -63,7 +84,7 @@ class FocalLoss(nn.Module):
         avg_weight = target * pos_weight + (1 - target) * neg_weight
         loss /= avg_weight.mean()
 
-        return loss.mean()
+        return loss.mean()#loss.sum() #
 
 
 class GHMCLoss(nn.Module):

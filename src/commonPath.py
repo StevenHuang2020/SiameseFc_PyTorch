@@ -4,6 +4,15 @@ import argparse
 import numpy as np
 import os
 
+def pathsFileFolders(path,subFolder=False): 
+    for dirpath, dirnames, filenames in os.walk(path):
+        dirnames.sort()
+        #print(dirnames)
+        for dirName in dirnames:
+            yield os.path.join(dirpath, dirName) #dirpath+'\\'+filename
+        if not subFolder:
+            break
+            
 def pathsFiles(dir,filter='',subFolder=False): #"cpp h txt jpg"
     def getExtFile(file):
         return file[file.find('.')+1:]
@@ -13,20 +22,22 @@ def pathsFiles(dir,filter='',subFolder=False): #"cpp h txt jpg"
         root_ext = os.path.splitext(path) 
         return root_ext[1]
 
-    fmts = filter.split()    
+    fmts = filter.split()  
+    #print('pathsFiles().......')  
     if fmts:
         for dirpath, dirnames, filenames in os.walk(dir):
             filenames.sort()
+            #print(filenames)
             for filename in filenames:
                 if getExtFile(getFmtFile(filename)) in fmts:
-                    yield dirpath+'\\'+filename
+                    yield os.path.join(dirpath, filename) #dirpath+'\\'+filename
             if not subFolder:
                 break
     else:
         for dirpath, dirnames, filenames in os.walk(dir):
             filenames.sort()
             for filename in filenames:
-                yield dirpath+'\\'+filename  
+                yield os.path.join(dirpath, filename) #dirpath+'\\'+filename  
             if not subFolder:
                 break    
 

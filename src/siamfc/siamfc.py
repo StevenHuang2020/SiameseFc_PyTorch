@@ -67,10 +67,11 @@ class TrackerSiamFC(Tracker):
         # setup model
         seqName = ''
         # bk=AlexNetV1()
-        # bk=Con2Net()
+        bk=Con2Net()  #output [8,1,15,15]
         # bk=Con8Net()
-        # bk=models.vgg19().features; seqName = 'vgg19'
-        bk=models.MobileNetV2().features; seqName = 'MobileNet'
+        #bk = models.AlexNet().features; seqName = 'AlexNet'         #output [8,1,4,4]
+        # bk=models.vgg19().features; seqName = 'vgg19'              #output [8,1,5,5]
+        # bk=models.MobileNetV2().features; seqName = 'MobileNet'    #output [8,1,5,5]
 
         self.net = Net(
             backbone=bk,
@@ -79,11 +80,13 @@ class TrackerSiamFC(Tracker):
                
         # load checkpoint if provided
         if net_path is not None:
-            #self.net.load_state_dict(torch.load(net_path, map_location=lambda storage, loc: storage))
-            self.net.load_state_dict(torch.load(net_path, map_location=lambda storage, loc: storage)['model_state_dict'], strict=False)
+            print("here load network...")
+            self.net.load_state_dict(torch.load(net_path, map_location=lambda storage, loc: storage), strict=False)
+            #self.net.load_state_dict(torch.load(net_path, map_location=lambda storage, loc: storage)['model_state_dict'], strict=False)
         self.net = self.net.to(self.device)
 
         # setup criterion
+        #self.criterion = BCELoss() #F.binary_cross_entropy
         self.criterion = BalancedLoss()
         #self.criterion = FocalLoss()
         
@@ -117,7 +120,7 @@ class TrackerSiamFC(Tracker):
             'instance_sz': 255,
             'context': 0.5,
             # inference parameters
-            'scale_num': 3,
+            'scale_num': 3, #3,
             'scale_step': 1.0375,
             'scale_lr': 0.59,
             'scale_penalty': 0.9745,
@@ -128,7 +131,7 @@ class TrackerSiamFC(Tracker):
             # train parameters
             'epoch_num': 3, #50,
             'batch_size': 8,
-            'num_workers': 32,
+            'num_workers': 2,
             'initial_lr': 1e-2,
             'ultimate_lr': 1e-5,
             'weight_decay': 5e-4,
@@ -141,7 +144,7 @@ class TrackerSiamFC(Tracker):
             #print('key=',key)
             if key == 'ultimate_lr' or key == 'initial_lr':
                 val = float(val)
-            elif key == 'epoch_num':
+            elif key == 'epoch_num' or key == 'r_pos' or key == 'r_neg':
                 val = int(val) 
                    
             if key in cfg:
@@ -169,6 +172,7 @@ class TrackerSiamFC(Tracker):
             np.hanning(self.upscale_sz))
         self.hann_window /= self.hann_window.sum()
 
+        #print('scale_num=', self.cfg.scale_num, 'hann_window=', self.hann_window, self.hann_window.shape)
         # search scale factors
         self.scale_factors = self.cfg.scale_step ** np.linspace(
             -(self.cfg.scale_num // 2),
@@ -223,6 +227,7 @@ class TrackerSiamFC(Tracker):
         # peak scale
         scale_id = np.argmax(np.amax(responses, axis=(1, 2)))
 
+        #print(responses, responses.shape, 'scale_id=', scale_id)
         # peak location
         response = responses[scale_id]
         response -= response.min()
@@ -231,35 +236,56 @@ class TrackerSiamFC(Tracker):
             self.cfg.window_influence * self.hann_window
         loc = np.unravel_index(response.argmax(), response.shape)
 
+        xMap = response
+        #print(response, response.shape, 'scale_id=', scale_id, 'loc=', loc, 'center=', self.center)
+        
+        # print('cfg:upscale_sz=', self.upscale_sz, self.cfg.response_up, self.cfg.response_sz)
+        # print('cfg:response_up=', self.cfg.response_up)
+        # print('cfg:response_sz=', self.cfg.response_sz)
+        # print('cfg:total_stride=', self.cfg.total_stride)
+        # print('cfg:instance_sz=', self.cfg.instance_sz)
+        
         # locate target center
         disp_in_response = np.array(loc) - (self.upscale_sz - 1) / 2
+        
+        #print('disp_in_response=', disp_in_response)
+        
         disp_in_instance = disp_in_response * \
             self.cfg.total_stride / self.cfg.response_up
+        #print('disp_in_instance=', disp_in_instance)
+        
         disp_in_image = disp_in_instance * self.x_sz * \
             self.scale_factors[scale_id] / self.cfg.instance_sz
+        #print('disp_in_image=', disp_in_image)
+            
         self.center += disp_in_image
-
+        #print('center=', self.center)
+        
+        #print('target,z,x=', self.target_sz,  self.z_sz,  self.x_sz)
         # update target size
         scale =  (1 - self.cfg.scale_lr) * 1.0 + \
             self.cfg.scale_lr * self.scale_factors[scale_id]
         self.target_sz *= scale
         self.z_sz *= scale
         self.x_sz *= scale
-
+        
         # return 1-indexed and left-top based bounding box
         box = np.array([
             self.center[1] + 1 - (self.target_sz[1] - 1) / 2,
             self.center[0] + 1 - (self.target_sz[0] - 1) / 2,
             self.target_sz[1], self.target_sz[0]])
 
-        return box
+        #print('target,z,x=', self.target_sz,  self.z_sz,  self.x_sz, 'box=', box)
+
+        return box, xMap
     
-    def track(self, img_files, box, visualize=False):
+    def track(self, img_files, box, visualize=False, retHeatmap=False):
         frame_num = len(img_files)
         boxes = np.zeros((frame_num, 4))
         boxes[0] = box
         times = np.zeros(frame_num)
-
+        hotMaps=[]
+        
         bar = SimpleProgressBar(total=frame_num, title='tracking images', width=30)
         for f, img_file in enumerate(img_files):
             img = ops.read_image(img_file)
@@ -268,7 +294,9 @@ class TrackerSiamFC(Tracker):
             if f == 0:
                 self.init(img, box)
             else:
-                boxes[f, :] = self.update(img)
+                boxes[f, :], hotMap = self.update(img)
+                if retHeatmap:
+                    hotMaps.append(hotMap)
             times[f] = time.time() - begin
 
             if visualize:
@@ -276,7 +304,7 @@ class TrackerSiamFC(Tracker):
 
             bar.update(f+1)
             
-        return boxes, times
+        return boxes, hotMaps, times
     
     def train_step(self, batch, backward=True):
         # set network mode
@@ -344,7 +372,7 @@ class TrackerSiamFC(Tracker):
                 loss = self.train_step(batch, backward=True)
                 
             #log = 'Epoch({}/{}):total({}) [{}/{}] Loss: {:.5f}'.format(epoch + 1 - self.curEpoch, self.cfg.epoch_num, epoch + 1, it + 1, len(dataloader), loss)
-            log = 'Epoch({}/{}):total({})[{}/{}],Loss:{:.5f}, run in {:.2f}s'.format(epoch + 1 - self.curEpoch, self.cfg.epoch_num, epoch + 1, it + 1, len(dataloader), loss, time.time()-t)
+            log = 'Epoch({}/{}):total({})[{}/{}],Loss:{:.10f}, run in {:.2f}s'.format(epoch + 1 - self.curEpoch, self.cfg.epoch_num, epoch + 1, it + 1, len(dataloader), loss, time.time()-t)
             print(log)
             self._writeLog(log + '\n')
             sys.stdout.flush()
@@ -413,7 +441,7 @@ class TrackerSiamFC(Tracker):
         if not os.path.exists(logFile):
             os.makedirs(logFile)
         
-        logFile=logFile + '/' + 'log.txt'
+        logFile=logFile + '/' + 'log_' + self.saveWeightFileName + '.txt'
         with open(logFile,'a',newline='\n') as dstF:
             dstF.write(log)
             

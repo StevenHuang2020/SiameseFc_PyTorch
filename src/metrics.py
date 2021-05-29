@@ -3,14 +3,16 @@
 #Description: Tracking metrics, IOU and precision
 #Date: 2021/04/11
 #Author: Steven Huang, Auckland, NZ
+import os 
 import torch
 import torchvision.ops.boxes as bops
 import numpy as np
 import matplotlib.pyplot as plt
-from predict import getFileList
+from predict import getFileList,parseFileName
 from commonPath import pathsFiles,getFileName
 from commonPath import getFileNameNo,createPath
 from plotCommon import plotSub
+import pandas as pd
 
 def get_iou(bb1, bb2):
     """
@@ -130,7 +132,7 @@ def Tracking_IOU(gt,pred, plot=True): #sucess rate
     #print('iou=', iou)
     #print('iou=', iou.shape)
     if plot:
-        plotIOU(iou.numpy())
+        plotIOU_SR(iou.numpy())
         
     return iou.numpy()
 
@@ -159,8 +161,8 @@ def Tracking_Precision(gt, pred, plot=True): #sucess rate
     #print('dis=', dis)
     #print('dis=', dis.shape)
     dis = torch.diagonal(dis, 0)
-    print('dis=', dis)
-    print('dis=', dis.shape)
+    #print('dis=', dis)
+    #print('dis=', dis.shape)
     
     if plot:
         plotPrecision(dis)
@@ -177,7 +179,7 @@ def getIoUXY(iou,N=200):
     #AUC
     auc = np.sum(np.array(y)/N)
     #print(auc,type(auc))
-    return x,y,auc
+    return x, y, auc, y[N//2]
 
 def getPrecisionXY(dis,N=200):    
     def Precision(k):
@@ -186,12 +188,13 @@ def getPrecisionXY(dis,N=200):
     
     x = np.linspace(0,50,num=N)
     y = list(map(Precision, [i for i in x]))
-    iou = y[int(N*30/50)] #get iou when dis=30
-    print('y=', y, ' iou=', iou)
-    return x,y,iou
+    pre = y[N*30//50] #get pre when dis=30
+    #print('y=', y, ' pre=', pre)
+    return x,y,pre
 
-def plotIOU(iou):
+def plotIOU_SR(iou, title='', dstPath=None, show=False):
     def plotXY(x,y,name): #Success rate
+        plt.clf()
         plt.title(name)
         plt.plot(x,y,label='SiamFC')
         plt.xlabel('Overlap threshold')
@@ -199,14 +202,21 @@ def plotIOU(iou):
         plt.xlim((0,1))
         plt.ylim((0,1))
         plt.grid(linestyle='-.') #'-', '--', '-.', ':', '',
-        plt.legend(loc='lower left')
-        plt.show()
+        #plt.legend(loc='lower left')
+        if dstPath is None:
+            plt.savefig(r'.\res\IoUMetric.png', dpi=300)
+        else:
+            plt.savefig(dstPath, dpi=300)
+            
+        if show:
+            plt.show()
     
-    x,y,_ = getIoUXY(iou)
-    plotXY(x, y, 'Success plots of OPE')
+    x,y,_,_ = getIoUXY(iou)
+    plotXY(x, y, title) #'Success plots of OPE'
     
-def plotPrecision(dis):
+def plotPrecision(dis, title='', dstPath=None,show=False):
     def plotXY(x,y,name): #Success rate
+        plt.clf()
         plt.title(name)
         plt.plot(x,y,label='SiamFC')
         plt.xlabel('Location error threshold')
@@ -214,46 +224,125 @@ def plotPrecision(dis):
         plt.xlim((0,50))
         plt.ylim((0,1))
         plt.grid(linestyle='-.') #'-', '--', '-.', ':', '',
-        plt.legend(loc='lower right')
-        plt.show()
+        #plt.legend(loc='lower right')
+        if dstPath is None:
+            plt.savefig(r'.\res\DisMetric.png', dpi=300)
+        else:
+            plt.savefig(dstPath, dpi=300)
+        if show:
+            plt.show()
         
     x,y,_ = getPrecisionXY(dis)
-    plotXY(x, y, 'Precision plots of OPE')
+    plotXY(x, y, title) #'Precision plots of OPE'
   
+def plotIOUs(iou, title='', dstPath=None, show=False):
+    def plotXY(x,y,name): #Success rate
+        plt.clf()
+        plt.title(name)
+        plt.plot(x,y,label='SiamFC')
+        plt.xlabel('Frames')
+        plt.ylabel('IoUs')
+        #plt.xlim((0,1))
+        #plt.ylim((0,1))
+        plt.grid(linestyle='-.') #'-', '--', '-.', ':', '',
+        #plt.legend(loc='lower left')
+        if dstPath is None:
+            plt.savefig(r'.\res\IoUs.png', dpi=300)
+        else:
+            plt.savefig(dstPath, dpi=300)
+            
+        if show:
+            plt.show()
+    
+    print('iou=', iou,type(iou),iou.shape)
+    
+    x,y = np.arange(len(iou)), iou
+    plotXY(x, y, title) 
+    
+def plotDistances(dis, title='', dstPath=None,show=False):
+    def plotXY(x,y,name): #Success rate
+        plt.clf()
+        plt.title(name)
+        plt.plot(x,y,label='SiamFC')
+        plt.xlabel('Frames')
+        plt.ylabel('Distance')
+        #plt.xlim((0,50))
+        #plt.ylim((0,1))
+        plt.grid(linestyle='-.') #'-', '--', '-.', ':', '',
+        #plt.legend(loc='lower right')
+        if dstPath is None:
+            plt.savefig(r'.\res\DisMetric.png', dpi=300)
+        else:
+            plt.savefig(dstPath, dpi=300)
+        if show:
+            plt.show()
+        
+    x,y = np.arange(len(dis)), dis
+    plotXY(x, y, title)
+
 ##################### MOT7 ###################
 def loadLines2Numpy(file):
     data = np.loadtxt(file)
-    #print('data=', type(data), data.shape)
+    #print('data=', type(data), data, data.shape)
+    
+    #data = data[data != 0]
+    #print('after data=', type(data), data, data.shape)
     return data
 
-def plotAllIoU():
-    base = r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN'
-    iouFile = base + '\\IoU_alexnet_e754\\IoU.txt'
-    plotIOU(loadLines2Numpy(iouFile))
+def plotAllIoU_SR(iouFile,dstPath=None,show=False):
+    #base = r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN'
+    #iouFile = base + '\\IoU_alexnet_e754\\IoU.txt'
+    plotIOU_SR(loadLines2Numpy(iouFile), dstPath=dstPath,show=show)
  
-def plotAllPrecision():
-    base = r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN'
-    disFile = base + '\\IoU_alexnet_e754\\dis.txt'
-    plotPrecision(loadLines2Numpy(disFile))
+def plotAllPrecision(disFile, dstPath=None,show=False):
+    #base = r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN'
+    #disFile = base + '\\IoU_alexnet_e754\\dis.txt'
+    plotPrecision(loadLines2Numpy(disFile), dstPath=dstPath,show=show)
        
-def plotCompareIoU():
-    base = r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN'
+def plotAllIoUs(iouFile,dstPath=None,show=False):
+    plotIOUs(loadLines2Numpy(iouFile), dstPath=dstPath,show=show)
+    
+def plotAllDis(disFile, dstPath=None,show=False):
+    plotDistances(loadLines2Numpy(disFile), dstPath=dstPath,show=show)
+    
+def testPlot():
+    N=500
+    #iou = np.random.rand(N)
+    iou = np.random.uniform(low=0, high=1, size=(N,))
+    plotIOU_SR(iou)
+    #plotPrecision()
+    
+def plotCompareIoU(base):
     iouFile1 = base + '\\IoU_alexnet_e754\\IoU.txt'
     label1 = 'SiamFC_Alexnet'
-    
     iouFile2 = base + '\\IoU_siamfc_Con2Net_BalancedLoss_e\\IoU.txt'
     label2 = 'SiamFC_Con2Net'
-
     
+    iouFile3 = base + '\\IoU_siamfc_Sequential_vgg19_BalancedLoss_e\\IoU.txt'
+    #iouFile3 = base + '\\IoU_siamfc_Sequential_vgg19_FocalLoss_e\\IoU.txt'
+    label3 = 'SiamFC_Vgg19'
+    #iouFile4 = base + '\\IoU_siamfc_Sequential_MobileNet_BalancedLoss_e\\IoU.txt'
+    iouFile4 = base + '\\IoU_siamfc_Sequential_MobileNet_FocalLoss_e\\IoU.txt'
+    label4 = 'SiamFC_MobileNetV2'
+
+    plt.clf()
     ax = plt.subplot(1,1,1)
     
-    x,y,auc = getIoUXY(loadLines2Numpy(iouFile1))
+    x,y,auc,sr = getIoUXY(loadLines2Numpy(iouFile1))
     plotSub(x, y, ax, label=label1, color='b')
-    print(label1, ' AUC=', auc)
+    print(label1, ' AUC=', auc, ' sr=', sr)
     
-    x,y,auc = getIoUXY(loadLines2Numpy(iouFile2))
+    x,y,auc,sr = getIoUXY(loadLines2Numpy(iouFile2))
     plotSub(x, y, ax, label=label2, color='r', linestyle='dashed')
-    print(label2, ' AUC=', auc)
+    print(label2, ' AUC=', auc, ' sr=', sr)
+    
+    x,y,auc,sr = getIoUXY(loadLines2Numpy(iouFile3))
+    plotSub(x, y, ax, label=label3, color='g', linestyle='dotted')
+    print(label3, ' AUC=', auc, ' sr=', sr)
+    
+    x,y,auc,sr = getIoUXY(loadLines2Numpy(iouFile4))
+    plotSub(x, y, ax, label=label4, color='k', linestyle='dashdot')
+    print(label4, ' AUC=', auc, ' sr=', sr)
     
     #plt.axis('square')
     plt.xlabel('Overlap threshold')
@@ -261,28 +350,44 @@ def plotCompareIoU():
     plt.xlim((0,1))
     plt.ylim((0,1))
     plt.grid(linestyle='-.') #'-', '--', '-.', ':', '',
-    plt.legend(loc='lower left')
+    plt.legend(loc='upper right')
     #plt.legend()
     plt.savefig(r'.\res\IoUPlot.png', dpi=300)
     plt.show()
     
-def plotComparePrecision():
-    base = r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN'
+def plotComparePrecision(base):
+    #base = r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN'
     disFile1 = base + '\\IoU_alexnet_e754\\dis.txt'
     label1 = 'SiamFC_Alexnet'
     
     disFile2 = base + '\\IoU_siamfc_Con2Net_BalancedLoss_e\\dis.txt'
     label2 = 'SiamFC_Con2Net'
-
+    
+    disFile3 = base + '\\IoU_siamfc_Sequential_vgg19_BalancedLoss_e\\dis.txt'
+    label3 = 'SiamFC_Vgg19'
+    
+    #disFile4 = base + '\\IoU_siamfc_Sequential_MobileNet_BalancedLoss_e\\dis.txt'
+    disFile4 = base + '\\IoU_siamfc_Sequential_MobileNet_FocalLoss_e\\dis.txt'
+    label4 = 'SiamFC_MobileNetV2'
+    
+    plt.clf()
     ax = plt.subplot(1,1,1)
     
-    x,y,iou = getPrecisionXY(loadLines2Numpy(disFile1))
+    x,y,pre = getPrecisionXY(loadLines2Numpy(disFile1))
     plotSub(x, y, ax, label=label1, color='b')
-    print(label1, 'final IoU=', iou)
+    print(label1, 'final pre=', pre)
     
-    x,y,iou = getPrecisionXY(loadLines2Numpy(disFile2))
+    x,y,pre = getPrecisionXY(loadLines2Numpy(disFile2))
     plotSub(x, y, ax, label=label2, color='r', linestyle='dashed')
-    print(label2, 'final IoU=', iou)
+    print(label2, 'final pre=', pre)
+    
+    x,y,pre = getPrecisionXY(loadLines2Numpy(disFile3))
+    plotSub(x, y, ax, label=label3, color='g', linestyle='dotted')
+    print(label3, 'final pre=', pre)
+    
+    x,y,pre = getPrecisionXY(loadLines2Numpy(disFile4))
+    plotSub(x, y, ax, label=label4, color='k', linestyle='dashdot')
+    print(label4, 'final pre=', pre)
     
     #plt.axis('square')
     plt.xlabel('Location error threshold')
@@ -290,7 +395,7 @@ def plotComparePrecision():
     plt.xlim((0,50))
     plt.ylim((0,1))
     plt.grid(linestyle='-.') #'-', '--', '-.', ':', '',
-    plt.legend(loc='lower right')
+    plt.legend(loc='upper right')
     #plt.legend()
     plt.savefig(r'.\res\PrecisonPlot.png', dpi=300)
     plt.show()
@@ -301,14 +406,22 @@ def getMOT_GTAndPredAll(trueFile, predictPath, IoUPath): #get Iou&Distance to on
     # predictPath = base + '\\predBoxFiles'
     # IoUPath = base + '\\IoU'
     createPath(IoUPath)
+    ioufilesPath = os.path.join(IoUPath,'res')
+    createPath(ioufilesPath)
     
     gtFiles = getFileList(trueFile, 'txt')
     iouAll = None
     disAll = None
+    df = pd.DataFrame()
     for i, gtFile in enumerate(gtFiles):
-        predictFile = predictPath + '\\' +  getFileNameNo(gtFile) + '_pred.txt'
-        print(str(i)+'/'+str(len(gtFiles)), gtFile, predictFile)
-        #IouFile = IoUPath + '\\' +  getFileNameNo(gtFile) + '_IoU.txt'
+        objId,start,stop = parseFileName(getFileNameNo(gtFile))
+        predictFile = os.path.join(predictPath, getFileNameNo(gtFile) + '_pred.txt')
+        print(str(i)+'/'+str(len(gtFiles)), getFileName(gtFile), predictFile, objId,start,stop)
+        IouFile = os.path.join(ioufilesPath, getFileNameNo(gtFile) + '_IoU.txt')
+        
+        if not os.path.exists(predictFile):
+            print('warning: file not exist! ', predictFile)
+            continue 
         
         gt,pred = getGroundTrueAndPred(gtFile, predictFile, delimiter=',')
     
@@ -325,19 +438,27 @@ def getMOT_GTAndPredAll(trueFile, predictPath, IoUPath): #get Iou&Distance to on
             disAll = np.hstack((disAll,dis))
             
         #torch.save(iou, IouFile)
-        #np.savetxt(IouFile, iou, fmt='%f')
+        np.savetxt(IouFile, iou, fmt='%f')
+        #print('iou=\n', iou, np.mean(iou))
+        #print('dis=\n', dis, np.mean(dis))
+        
+        line = pd.DataFrame([[objId, np.mean(iou), np.mean(dis)]], columns=['objId','meanIoU','meanDis'])
+        df = df.append(line)
         #break
         
-    IouFile = IoUPath + '\\' +  'IoU.txt'    
-    #print('iouAll=', type(iouAll), iouAll.shape)
+    IouFile = os.path.join(IoUPath, 'IoU.txt')
+    print('iouAll=', type(iouAll), iouAll.shape)
     np.savetxt(IouFile, iouAll, fmt='%f')
-    #plotIOU(iouAll)
+    #plotIOU_SR(iouAll)
     
-    disFile = IoUPath + '\\' +  'dis.txt'    
-    #print('disAll=', type(disAll), disAll.shape)
+    disFile = os.path.join(IoUPath, 'dis.txt') 
+    print('disAll=', type(disAll), disAll.shape)
     np.savetxt(disFile, disAll, fmt='%f')
-    #plotPrecision(disAll)    
-        
+    #plotPrecision(disAll)   
+    print('df=\n', df)
+    df.set_index(["objId"], inplace=True)
+    df.to_csv(os.path.join(IoUPath, 'statits.csv'),index=True)
+    
 def getMOT_GTAndPred():
     base = r'.\res\data\MOT17\MOT17-04-FRCNN_ID_1\\'
     trueFile = base + 'groundtruth_rect.txt' #
@@ -349,40 +470,167 @@ def Tracking_All_MOT7():
     #gt,pred = getMOT_GTAndPred() #one gt and pred
     #Tracking_IOU(gt,pred)
     
-    base = r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN'
+    #base = os.path.abspath(r'data/MOT/MOT17_GT_Jason/MOT17-04-FRCNN')
+    #base = os.path.expanduser(r'data/MOT/MOT17_GT_Jason/MOT17-04-FRCNN')
+    base = os.path.abspath(r'data/MOT/MOT17_GT_Jason/MOT17-13-FRCNN')
+    #base = os.path.expanduser(r'data/MOT/MOT17_GT_Jason/MOT17-02-FRCNN')
     trueFile = base
     
-    if 0:
-        predictPath = base + '\\predBoxFiles'
-        name = 'alexnet_e754'
-        IoUPath = base + '\\IoU_' + name
-    else:
-        predictPath = base + '\\predBoxFiles_siamfc_Con2Net_BalancedLoss_e'
-        name = 'siamfc_Con2Net_BalancedLoss_e'
-        IoUPath = base + '\\IoU_' + name
+    name = 'alexnet_e754'
+    name = 'siamfc_Con2Net_BalancedLoss_e'
+    name = 'siamfc_Sequential_vgg19_BalancedLoss_e'
+    name = 'siamfc_Sequential_vgg19_FocalLoss_e'
+    name = 'siamfc_Sequential_MobileNet_BalancedLoss_e'
+    name = 'siamfc_Sequential_AlexNet_BalancedLoss_e'
+    name = 'siamfc_Sequential_MobileNet_FocalLoss_e'
+    name = 'siamfc_Con2Net__BalancedLoss_e'
+    name = 'siamfc_Sequential_AlexNetOO_FocalLoss_e'
     
-    #getMOT_GTAndPredAll(trueFile, predictPath, IoUPath)
+    name = 'siamfc_Sequential_AlexNet_FocalLoss_e'
+    name = 'siamfc_alexnet_e554'
+    #name = 'siamfc_alexnet_e50'
+    name = 'siamfc_alexnet_e754'
     
-    plotAllIoU()
-    plotAllPrecision()
+    predictPath = os.path.join(base, 'predBoxFiles_'+name)
+    IoUPath = os.path.join(base, 'IoU_' + name)
+        
+    getMOT_GTAndPredAll(trueFile, predictPath, IoUPath)
+    
+    #plotCompareIoU(base)
+    #plotComparePrecision(base)
     
 def Tracking_Precision_MOT17():
     gt,pred = getMOT_GTAndPred()
     return Tracking_Precision(gt,pred)
 
+def analysisTrecking(csvFile):
+    def readCsv(file):
+        df = pd.read_csv(file)
+        #print(df.describe().transpose())
+        print(df.head())
+        print('df.columns=',df.columns)
+        #print('df.dtypes = ',df.dtypes)
+        #print('df.dtypes = ',df.dtypes)
+        return df
+    df = readCsv(csvFile)
+    
+    num = 5
+    #best iou
+    df = df.sort_values(by=['meanIoU'], ascending=False)
+    print('best iou=\n', df[:num])
+    #print(df[:num]['objId'])
+    
+    #best distance
+    df = df.sort_values(by=['meanDis'], ascending=True)
+    print('best distance=\n', df[:num])
+    
+    num = 5
+    #worst iou
+    df = df.sort_values(by=['meanIoU'], ascending=True)
+    print('worst iou=\n', df[:num])
+    
+    #worst distance
+    df = df.sort_values(by=['meanDis'], ascending=False)
+    print('worst distance=\n', df[:num])
+    
+def analyseMetrics():
+    base = r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN'
+    #base = r'.\data\MOT\MOT17_GT_Jason\MOT17-13-FRCNN'
+    #base = r'.\data\MOT\MOT17_GT_Jason\MOT17-02-FRCNN'
+
+    name = 'IoU_alexnet_e754'
+    #name = 'IoU_siamfc_Sequential_vgg19_BalancedLoss_e'
+    #name = 'IoU_siamfc_Sequential_MobileNet_FocalLoss_e'
+    #name = 'IoU_siamfc_Con2Net_BalancedLoss_e'
+    name = 'IoU_siamfc_Sequential_AlexNet_BalancedLoss_e'
+    #name = 'IoU_siamfc_Sequential_AlexNetOO_FocalLoss_e'
+    #name = 'IoU_siamfc_Con2Net__BalancedLoss_e'
+    name = 'IoU_siamfc_Sequential_AlexNet_FocalLoss_e'
+    name = 'IoU_siamfc_Sequential_vgg19_FocalLoss_e'
+    name = 'IoU_siamfc_alexnet_e554'
+    #name = 'IoU_siamfc_alexnet_e50'
+    name = 'IoU_siamfc_alexnet_e754'
+    
+    dstPath = os.path.join(base, name)
+    iouFile = os.path.join(dstPath, 'IoU.txt')
+    disFile = os.path.join(dstPath, 'dis.txt')
+    
+    #plotAllIoU_SR(iouFile, os.path.join(dstPath, 'IoU.png'))
+    #plotAllPrecision(disFile, os.path.join(dstPath, 'pre.png'))
+    
+    csvFile = os.path.join(base, name,'statits.csv')
+    analysisTrecking(csvFile)
+    
+def analyseIoU(path):
+    objFilters = [100,101,102]
+    iouFiles = []
+    iouFilesAll=pathsFiles(path,'txt')
+    for i in iouFilesAll:
+        objId,start,stop = parseFileName(getFileNameNo(i))
+        iou = loadLines2Numpy(i)
+        #print(i, objId,start,stop, iou.shape)
+        if objId in objFilters:
+            iouFiles.append(i)
+    
+    #start draw
+    plt.clf()
+    ax = plt.subplot(1,1,1)
+    
+    for i in iouFiles:
+        objId,start,stop = parseFileName(getFileNameNo(i))
+        iou = loadLines2Numpy(i)
+        
+        x = np.arange(start,stop+1)
+        y = iou
+        plotSub(x, y, ax, label='obj:'+str(objId))
+            
+    #plt.axis('square')
+    plt.xlabel('Frames')
+    plt.ylabel('IoU')
+    #plt.xlim((0,1))
+    #plt.ylim((0,1))
+    plt.grid(linestyle='-.') #'-', '--', '-.', ':', '',
+    plt.legend(loc='upper right')
+    #plt.legend()
+    #plt.savefig(r'.\res\IoUObjs.png', dpi=300)
+    plt.show()
+    
+def analyseObjTracking():
+    base = r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN'
+    name = 'IoU_siamfc_alexnet_e754'
+    iousPath = os.path.join(base, name, 'res')
+    # iouFile = os.path.join(iousPath, 'IoU.txt')
+    # disFile = os.path.join(iousPath, 'dis.txt')
+    
+    # plotAllIoUs(iouFile, os.path.join(iousPath, 'IoUFrames.png'),show=True)
+    # plotAllDis(disFile, os.path.join(iousPath, 'distances.png'),show=True)
+    analyseIoU(iousPath)
+    
+    
 def main():
     #testIOU()
     #Tracking_IOU_OTB()
     #Tracking_Precision_OTB()
     
     #Tracking_Precision_MOT17()
-    #Tracking_All_MOT7()
-    
-    plotCompareIoU()
-    plotComparePrecision()
-    
-    #getPrecisionXY(np.linspace(0,50,20))
+    #Tracking_All_MOT7()  #estimate prediction
+    analyseMetrics()
+    #analyseObjTracking()
+    #testPlot()
     
 if __name__=="__main__":
     main()
 
+
+"""
+SiamFC_Alexnet  AUC= 0.22647158218125962  sr= 0.24445907395216152
+SiamFC_Con2Net  AUC= 0.4699662052682746  sr= 0.5392157770473589
+SiamFC_Vgg19  AUC= 0.03386087338161071  sr= 0.013605442176870748
+SiamFC_MobileNetV2  AUC= 0.040632556736136555  sr= 0.026476863725511324
+
+SiamFC_Alexnet final pre= 0.2869870528856704
+SiamFC_Con2Net final pre= 0.5615110411555021
+SiamFC_Vgg19 final pre= 0.039850779021285934
+SiamFC_MobileNetV2 final pre= 0.03467747149723054
+
+"""
