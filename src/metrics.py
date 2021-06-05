@@ -9,10 +9,34 @@ import torchvision.ops.boxes as bops
 import numpy as np
 import matplotlib.pyplot as plt
 from predict import getFileList,parseFileName
-from commonPath import pathsFiles,getFileName
+from commonPath import pathsFiles,getFileName,deleteFile
 from commonPath import getFileNameNo,createPath
 from plotCommon import plotSub
 import pandas as pd
+import matplotlib 
+
+matplotlib.rcParams['figure.dpi'] = 200 #high resolution when save plot
+"""
+ ['GTK3Agg', 'GTK3Cairo', 'MacOSX', 'nbAgg', 'Qt4Agg', 'Qt4Cairo', \
+'Qt5Agg', 'Qt5Cairo', 'TkAgg', 'TkCairo', 'WebAgg', 'WX', 'WXAgg', \
+    'WXCairo', 'agg', 'cairo', 'pdf', 'pgf', 'ps', 'svg', 'template']
+"""
+#matplotlib.use('template')
+
+SMALL_SIZE = 6
+MEDIUM_SIZE = 10
+BIGGER_SIZE = 12
+
+#plt.rc('figure.dpi', 300)
+plt.rc('font', size=SMALL_SIZE)          # controls default text sizes
+#plt.rc('font', family='Times New Roman')
+plt.rc('axes', titlesize=SMALL_SIZE)     # fontsize of the axes title
+plt.rc('axes', labelsize=SMALL_SIZE)    # fontsize of the x and y labels
+plt.rc('xtick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
+plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
+plt.rc('figure', titlesize=SMALL_SIZE)  # fontsize of the figure title
+
 
 def get_iou(bb1, bb2):
     """
@@ -313,7 +337,7 @@ def testPlot():
     #plotPrecision()
     
 def plotCompareIoU(base):
-    iouFile1 = base + '\\IoU_alexnet_e754\\IoU.txt'
+    iouFile1 = base + '\\IoU_siamfc_alexnet_e754\\IoU.txt'
     label1 = 'SiamFC_Alexnet'
     iouFile2 = base + '\\IoU_siamfc_Con2Net_BalancedLoss_e\\IoU.txt'
     label2 = 'SiamFC_Con2Net'
@@ -357,7 +381,7 @@ def plotCompareIoU(base):
     
 def plotComparePrecision(base):
     #base = r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN'
-    disFile1 = base + '\\IoU_alexnet_e754\\dis.txt'
+    disFile1 = base + '\\IoU_siamfc_alexnet_e754\\dis.txt'
     label1 = 'SiamFC_Alexnet'
     
     disFile2 = base + '\\IoU_siamfc_Con2Net_BalancedLoss_e\\dis.txt'
@@ -400,14 +424,16 @@ def plotComparePrecision(base):
     plt.savefig(r'.\res\PrecisonPlot.png', dpi=300)
     plt.show()
 
-def getMOT_GTAndPredAll(trueFile, predictPath, IoUPath): #get Iou&Distance to one file from all predciton files
+def getMOT_GTAndPredAll(trueFile, predictPath, IoUPath, objIDFilters=[]): #get Iou&Distance to one file from all predciton files
     # base = r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN'
     # trueFile = base
     # predictPath = base + '\\predBoxFiles'
     # IoUPath = base + '\\IoU'
     createPath(IoUPath)
-    ioufilesPath = os.path.join(IoUPath,'res')
+    ioufilesPath = os.path.join(IoUPath,'resIoU')
     createPath(ioufilesPath)
+    disfilesPath = os.path.join(IoUPath,'resDis')
+    createPath(disfilesPath)
     
     gtFiles = getFileList(trueFile, 'txt')
     iouAll = None
@@ -415,9 +441,14 @@ def getMOT_GTAndPredAll(trueFile, predictPath, IoUPath): #get Iou&Distance to on
     df = pd.DataFrame()
     for i, gtFile in enumerate(gtFiles):
         objId,start,stop = parseFileName(getFileNameNo(gtFile))
+        
+        if objIDFilters != [] and objId in objIDFilters:
+            continue
+        
         predictFile = os.path.join(predictPath, getFileNameNo(gtFile) + '_pred.txt')
         print(str(i)+'/'+str(len(gtFiles)), getFileName(gtFile), predictFile, objId,start,stop)
         IouFile = os.path.join(ioufilesPath, getFileNameNo(gtFile) + '_IoU.txt')
+        disFile = os.path.join(disfilesPath, getFileNameNo(gtFile) + '_dis.txt')
         
         if not os.path.exists(predictFile):
             print('warning: file not exist! ', predictFile)
@@ -439,6 +470,7 @@ def getMOT_GTAndPredAll(trueFile, predictPath, IoUPath): #get Iou&Distance to on
             
         #torch.save(iou, IouFile)
         np.savetxt(IouFile, iou, fmt='%f')
+        np.savetxt(disFile, dis, fmt='%f')
         #print('iou=\n', iou, np.mean(iou))
         #print('dis=\n', dis, np.mean(dis))
         
@@ -463,58 +495,147 @@ def getMOT_GTAndPred():
     base = r'.\res\data\MOT17\MOT17-04-FRCNN_ID_1\\'
     trueFile = base + 'groundtruth_rect.txt' #
     predictFile = base + 'pred.txt'
-    
     return getGroundTrueAndPred(trueFile, predictFile, delimiter=',') 
 
+def removeSomeIoU(base):
+    def checkFile(path):
+        for f in pathsFiles(path,'txt'):
+            objId,start,stop = parseFileName(getFileNameNo(f))
+            iou = loadLines2Numpy(f)
+            if iou[1] == 0:
+                print('pred=0 ', getFileNameNo(f), objId,start,stop)
+            #print(f, iou[1])
+            
+    def removeObjFiles(path,objIds):
+        for f in pathsFiles(path,'txt'):
+            objId,start,stop = parseFileName(getFileNameNo(f))
+            if objId in objIds:
+                print('delete', f)
+                deleteFile(f)
+                
+            
+    objIds = [107,108,109,110,111,112,113,114,117,118,119,\
+        121,124,125,126,127,128,129,130,131,132,133,134,\
+        135,138,13,14,15,19,20,2,38,39,41,42,47,51,53,60,\
+        63,66,67,68,69,70,71,72,73,75,76,77,78,80,82,84,85,\
+        87,88,89,90,91,92,93,94,95,97,98,99]
+    
+    pathAll =[]
+    pathAll.append(os.path.join(base, 'IoU_siamfc_alexnet_e754'))
+    pathAll.append(os.path.join(base, 'IoU_siamfc_Con2Net_BalancedLoss_e'))
+    pathAll.append(os.path.join(base, 'IoU_siamfc_Sequential_vgg19_BalancedLoss_e'))
+    pathAll.append(os.path.join(base, 'IoU_siamfc_Sequential_MobileNet_FocalLoss_e'))
+    for i in pathAll:
+        disPath = os.path.join(i, 'resDis')
+        iouPath = os.path.join(i, 'resIoU')
+        #removeObjFiles(disPath,objIds)
+        #removeObjFiles(iouPath,objIds)
+        print('iouPath=\n', iouPath)
+        checkFile(iouPath)
+        #break
+    
 def Tracking_All_MOT7():
     #gt,pred = getMOT_GTAndPred() #one gt and pred
     #Tracking_IOU(gt,pred)
     
-    #base = os.path.abspath(r'data/MOT/MOT17_GT_Jason/MOT17-04-FRCNN')
+    base = os.path.abspath(r'data/MOT/MOT17_GT_Jason/MOT17-04-FRCNN')
     #base = os.path.expanduser(r'data/MOT/MOT17_GT_Jason/MOT17-04-FRCNN')
-    base = os.path.abspath(r'data/MOT/MOT17_GT_Jason/MOT17-13-FRCNN')
+    #base = os.path.abspath(r'data/MOT/MOT17_GT_Jason/MOT17-13-FRCNN')
     #base = os.path.expanduser(r'data/MOT/MOT17_GT_Jason/MOT17-02-FRCNN')
     trueFile = base
     
     name = 'alexnet_e754'
-    name = 'siamfc_Con2Net_BalancedLoss_e'
+    
     name = 'siamfc_Sequential_vgg19_BalancedLoss_e'
     name = 'siamfc_Sequential_vgg19_FocalLoss_e'
     name = 'siamfc_Sequential_MobileNet_BalancedLoss_e'
     name = 'siamfc_Sequential_AlexNet_BalancedLoss_e'
     name = 'siamfc_Sequential_MobileNet_FocalLoss_e'
-    name = 'siamfc_Con2Net__BalancedLoss_e'
-    name = 'siamfc_Sequential_AlexNetOO_FocalLoss_e'
+    name = 'siamfc_Con2Net__BalancedLoss_e' #02-frcnn,04
+  
+  
+    # name = 'siamfc_Sequential_AlexNetOO_FocalLoss_e'
+    #name = 'siamfc_Con2Net_BalancedLoss_e860'
+    #name = 'siamfc_alexnet_e654'
+    #name = 'siamfc_AlexNetV1_FocalLoss_e713'
     
-    name = 'siamfc_Sequential_AlexNet_FocalLoss_e'
-    name = 'siamfc_alexnet_e554'
-    #name = 'siamfc_alexnet_e50'
-    name = 'siamfc_alexnet_e754'
+    # name = 'siamfc_Sequential_AlexNet_FocalLoss_e'
+    # name = 'siamfc_alexnet_e554'
+    # #name = 'siamfc_alexnet_e50'
+    
+    #name = 'old'
+    # name = 'siamfc_alexnet_e754'
+    # name = 'siamfc_Con2Net_BalancedLoss_e'
+    # name = 'siamfc_Sequential_vgg19_BalancedLoss_e'
+    # name = 'siamfc_Sequential_MobileNet_FocalLoss_e'
     
     predictPath = os.path.join(base, 'predBoxFiles_'+name)
     IoUPath = os.path.join(base, 'IoU_' + name)
-        
-    getMOT_GTAndPredAll(trueFile, predictPath, IoUPath)
     
+    """
+    # MOT17-04-FRCNN siamfc_alexnet_e754
+    objIds = [107,108,109,110,111,112,113,114,117,118,119,\
+        121,124,125,126,127,128,129,130,131,132,133,134,\
+        135,138,13,14,15,19,20,2,38,39,41,42,47,51,53,60,\
+        63,66,67,68,69,70,71,72,73,75,76,77,78,80,82,84,85,\
+        87,88,89,90,91,92,93,94,95,97,98,99]
+    
+    # MOT17-04-FRCNN siamfc_Con2Net_BalancedLoss_e
+    objIds = [115,128]
+    
+    
+    # MOT17-04-FRCNN siamfc_Sequential_vgg19_BalancedLoss_e
+    objIds = [107,108,109,110,111,112,113,114,115,117,118,\
+        121,124,125,126,127,128,129,130,131,132,133,134,135,\
+        138,13,14,15,16,19,20,2,38,40,41,42,47,4,51,53,60,66,\
+        67,68,69,70,71,72,73,75,76,77,78,80,84,85,87,88,89,90,\
+        91,98,99]
+    
+    # MOT17-04-FRCNN siamfc_Sequential_MobileNet_FocalLoss_e
+    objIds = [102,103,105,107,108,109,110,112,113,114,115,117,\
+        118,121,126,127,128,135,138,13,15,21,25,28,33,37,38,39,\
+            41,44,4,51,53,5,60,62,66,67,68,70,71,72,73,82,84,85,88,92,9]
+    """
+    objIds=[]
+    #getMOT_GTAndPredAll(trueFile, predictPath, IoUPath, objIDFilters=objIds)#filter excluded objs
+    
+    #MOT17-13-FRCNN no pedestrain objs
+    objIdFilters = [1,3,12,29,30,41,76,80,82,85,104,105,116,\
+            106,81,125,92,130101,184,107,108,89,179,90,91,177,93,\
+            162,99,182,150,109,181,175,183,138,176,146,96,141,185,\
+            75,65,94,95,110,161,103,121,88,97,131,83,87,79,86,111,\
+            172,112,174,113,27,117,114,173,118,98,115,77,130,84,78] #no pedestrains
+     
+    #MOT17-04-FRCNN no pedestrain objs
+    objIdFilters = [7,8,9,10,11,12,13,14,15,16,17,18,19,\
+            20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,\
+            36,37,38,39,40,41,42,43,44,47,48,49,50,51,52,53,54,\
+                55,56,57,58,59,64,78, 137,] #no pedestrains
+    
+    #MOT17-02-FRCNN no pedestrain objs
+    #objIdFilters = [4,50,51,52,53,79,75] #no pedestrains
+    analyseMetrics(base, 'IoU_'+name, noPedObjs=objIdFilters)
+    
+    #removeSomeIoU(base)
     #plotCompareIoU(base)
     #plotComparePrecision(base)
+    
     
 def Tracking_Precision_MOT17():
     gt,pred = getMOT_GTAndPred()
     return Tracking_Precision(gt,pred)
 
-def analysisTrecking(csvFile):
-    def readCsv(file):
-        df = pd.read_csv(file)
-        #print(df.describe().transpose())
-        print(df.head())
-        print('df.columns=',df.columns)
-        #print('df.dtypes = ',df.dtypes)
-        #print('df.dtypes = ',df.dtypes)
-        return df
-    df = readCsv(csvFile)
+def readCsv(file):
+    df = pd.read_csv(file)
+    #print(df.describe().transpose())
+    print(df.head())
+    print('df.columns=',df.columns)
+    #print('df.dtypes = ',df.dtypes)
+    #print('df.dtypes = ',df.dtypes)
+    return df
     
-    num = 5
+def analysisTrecking(df):    
+    num = 10
     #best iou
     df = df.sort_values(by=['meanIoU'], ascending=False)
     print('best iou=\n', df[:num])
@@ -524,7 +645,6 @@ def analysisTrecking(csvFile):
     df = df.sort_values(by=['meanDis'], ascending=True)
     print('best distance=\n', df[:num])
     
-    num = 5
     #worst iou
     df = df.sort_values(by=['meanIoU'], ascending=True)
     print('worst iou=\n', df[:num])
@@ -533,45 +653,43 @@ def analysisTrecking(csvFile):
     df = df.sort_values(by=['meanDis'], ascending=False)
     print('worst distance=\n', df[:num])
     
-def analyseMetrics():
-    base = r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN'
-    #base = r'.\data\MOT\MOT17_GT_Jason\MOT17-13-FRCNN'
-    #base = r'.\data\MOT\MOT17_GT_Jason\MOT17-02-FRCNN'
-
-    name = 'IoU_alexnet_e754'
-    #name = 'IoU_siamfc_Sequential_vgg19_BalancedLoss_e'
-    #name = 'IoU_siamfc_Sequential_MobileNet_FocalLoss_e'
-    #name = 'IoU_siamfc_Con2Net_BalancedLoss_e'
-    name = 'IoU_siamfc_Sequential_AlexNet_BalancedLoss_e'
-    #name = 'IoU_siamfc_Sequential_AlexNetOO_FocalLoss_e'
-    #name = 'IoU_siamfc_Con2Net__BalancedLoss_e'
-    name = 'IoU_siamfc_Sequential_AlexNet_FocalLoss_e'
-    name = 'IoU_siamfc_Sequential_vgg19_FocalLoss_e'
-    name = 'IoU_siamfc_alexnet_e554'
-    #name = 'IoU_siamfc_alexnet_e50'
-    name = 'IoU_siamfc_alexnet_e754'
+def analyseMetrics(base, name, noPedObjs):    
+    def filtersNoPed(df, noPedObjs):
+        #print('df=', df,  df.shape, '\n')
+        #print('noPedObjs=', noPedObjs, len(noPedObjs), '\n')
+        for i, row in enumerate(df.iterrows()):
+            #print(i, 'row[1]=', row[1][0], type(row[1][0]))
+            if int(row[1][0]) in noPedObjs:
+                df = df.drop(i)
+        #print('df=', df, df.shape, '\n')
+        return df
     
     dstPath = os.path.join(base, name)
     iouFile = os.path.join(dstPath, 'IoU.txt')
     disFile = os.path.join(dstPath, 'dis.txt')
     
-    #plotAllIoU_SR(iouFile, os.path.join(dstPath, 'IoU.png'))
-    #plotAllPrecision(disFile, os.path.join(dstPath, 'pre.png'))
+    plotAllIoU_SR(iouFile, os.path.join(dstPath, 'IoU.png'))
+    plotAllPrecision(disFile, os.path.join(dstPath, 'pre.png'))
     
     csvFile = os.path.join(base, name,'statits.csv')
-    analysisTrecking(csvFile)
+    df = readCsv(csvFile)
+    if noPedObjs:
+        df = filtersNoPed(df,noPedObjs)
+    analysisTrecking(df)
     
-def analyseIoU(path):
-    objFilters = [100,101,102]
+def analyseIoU(path, objFilters = None, fromZero=False):
     iouFiles = []
     iouFilesAll=pathsFiles(path,'txt')
     for i in iouFilesAll:
         objId,start,stop = parseFileName(getFileNameNo(i))
         iou = loadLines2Numpy(i)
         #print(i, objId,start,stop, iou.shape)
-        if objId in objFilters:
+        if objFilters is None:
             iouFiles.append(i)
-    
+        else:
+            if objId in objFilters:
+                iouFiles.append(i)
+
     #start draw
     plt.clf()
     ax = plt.subplot(1,1,1)
@@ -580,9 +698,14 @@ def analyseIoU(path):
         objId,start,stop = parseFileName(getFileNameNo(i))
         iou = loadLines2Numpy(i)
         
-        x = np.arange(start,stop+1)
+        if fromZero:
+            x = np.arange(len(iouFiles))
+        else:
+            x = np.arange(start,stop+1)
         y = iou
-        plotSub(x, y, ax, label='obj:'+str(objId))
+        
+        ls = 'obj:'+str(objId)+', From '+str(start)+' To '+str(stop)
+        plotSub(x, y, ax, label=ls)
             
     #plt.axis('square')
     plt.xlabel('Frames')
@@ -590,22 +713,96 @@ def analyseIoU(path):
     #plt.xlim((0,1))
     #plt.ylim((0,1))
     plt.grid(linestyle='-.') #'-', '--', '-.', ':', '',
-    plt.legend(loc='upper right')
+    plt.legend(loc='lower right') #upper
     #plt.legend()
     #plt.savefig(r'.\res\IoUObjs.png', dpi=300)
+    plt.show()
+    
+def analyseDis(path, objFilters = None, fromZero=False):
+    disFiles = []
+    disFilesAll=pathsFiles(path,'txt')
+    for i in disFilesAll:
+        objId,start,stop = parseFileName(getFileNameNo(i))
+        iou = loadLines2Numpy(i)
+        #print(i, objId,start,stop, iou.shape)
+        if objFilters is None:
+            disFiles.append(i)
+        else:
+            if objId in objFilters:
+                disFiles.append(i)
+
+    #start draw
+    plt.clf()
+    ax = plt.subplot(1,1,1)
+    
+    for i in disFiles:
+        objId,start,stop = parseFileName(getFileNameNo(i))
+        iou = loadLines2Numpy(i)
+        
+        if fromZero:
+            x = np.arange(len(disFiles))
+        else:
+            x = np.arange(start,stop+1)
+        y = iou
+        
+        ls = 'obj:'+str(objId)+', From '+str(start)+' To '+str(stop)
+        plotSub(x, y, ax, label=ls)
+            
+    #plt.axis('square')
+    plt.xlabel('Frames')
+    plt.ylabel('Distance')
+    #plt.xlim((0,1))
+    #plt.ylim((0,1))
+    plt.grid(linestyle='-.') #'-', '--', '-.', ':', '',
+    plt.legend(loc='upper right') #
+    #plt.legend()
+    #plt.savefig(r'.\res\analyseDis.png', dpi=300)
     plt.show()
     
 def analyseObjTracking():
     base = r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN'
     name = 'IoU_siamfc_alexnet_e754'
-    iousPath = os.path.join(base, name, 'res')
-    # iouFile = os.path.join(iousPath, 'IoU.txt')
-    # disFile = os.path.join(iousPath, 'dis.txt')
+    iousPath = os.path.join(base, name, 'resIoU')
+    disPath = os.path.join(base, name, 'resDis')
+
+    bestIoUObjs = [48,7,55]#None # 116,34,6,16
+    bestDisObjs = [9,7,48,25,29,55,116,16,136,34]
+    worstIoUObjs = [38,90,53,15,95]
+    worstDisObjs = [89,66,2,99,71,80,84,85,111,119,120,121,122,141]
+    worstDisObjs = [89,66,2,80,84,120,121,122,141]
     
-    # plotAllIoUs(iouFile, os.path.join(iousPath, 'IoUFrames.png'),show=True)
-    # plotAllDis(disFile, os.path.join(iousPath, 'distances.png'),show=True)
-    analyseIoU(iousPath)
+    #observeObjIds = [6,7,9,12,16,100,101,106,116,123,137]#[1,3,4,5,6,7,9,12,16,100,101,106,116,123,137]
+    #observeObjIds = [100,101,106,116,123]
+    #observeObjIds = [6,7,9,16,137,139,140,81]
+    #observeObjIds = [48,7,9,29,55]
+    #observeObjIds = [38,90,53,15,95]
+    #observeObjIds = [7,9,48,25,29]
+    #observeObjIds = [89,66,2,99,71]
+    #analyseIoU(iousPath,objFilters=bestIoUObjs,fromZero=False)
+    #analyseIoU(iousPath,objFilters=observeObjIds,fromZero=False)
     
+    #analyseDis(disPath,objFilters=bestDisObjs,fromZero=False)
+    analyseDis(disPath,objFilters=worstDisObjs,fromZero=False)
+    
+def analyseObjTracking2():
+    base = r'.\data\MOT\MOT17_GT_Jason\MOT17-13-FRCNN'
+    name = 'IoU_siamfc_Con2Net__BalancedLoss_e'
+    iousPath = os.path.join(base, name, 'resIoU')
+    disPath = os.path.join(base, name, 'resDis')
+
+    bestIoUObjs = [175,140,185,108,99,116,44,107,101,109]#None # 116,34,6,16
+    bestDisObjs = [107,140,44,175,116,108,101,185,118,99]
+    worstIoUObjs = [82,29,130,39,28,41,7,86,85,36]
+    worstDisObjs = [125,81,18,139,78,83,84,131,79,20]
+
+    #observeObjIds = [38,90,53,15,95]
+    #observeObjIds = [7,9,48,25,29]
+    #observeObjIds = [89,66,2,99,71]
+    #analyseIoU(iousPath,objFilters=worstIoUObjs,fromZero=False)
+    #analyseIoU(iousPath,objFilters=observeObjIds,fromZero=False)
+    
+    analyseDis(disPath,objFilters=worstDisObjs,fromZero=False)
+    #analyseDis(disPath,objFilters=worstDisObjs,fromZero=False)
     
 def main():
     #testIOU()
@@ -613,9 +810,10 @@ def main():
     #Tracking_Precision_OTB()
     
     #Tracking_Precision_MOT17()
-    #Tracking_All_MOT7()  #estimate prediction
-    analyseMetrics()
+    Tracking_All_MOT7()  #estimate prediction
+    
     #analyseObjTracking()
+    #analyseObjTracking2()
     #testPlot()
     
 if __name__=="__main__":
@@ -633,4 +831,154 @@ SiamFC_Con2Net final pre= 0.5615110411555021
 SiamFC_Vgg19 final pre= 0.039850779021285934
 SiamFC_MobileNetV2 final pre= 0.03467747149723054
 
+#MOT17-13-FRCNN
+best iou=
+      objId   meanIoU    meanDis
+44     140  0.744940   3.333242
+123     44  0.670073   3.573572
+1      101  0.612425   7.748514
+64     159  0.519107  10.891508
+147     66  0.478441  24.586643
+156     74  0.421749  13.709427
+37     134  0.351134  38.254512
+109     31  0.333333  47.203192
+22     120  0.329446  27.743734
+63     158  0.311724  16.069593
+best distance=
+      objId   meanIoU    meanDis
+44     140  0.744940   3.333242
+123     44  0.670073   3.573572
+1      101  0.612425   7.748514
+64     159  0.519107  10.891508
+156     74  0.421749  13.709427
+63     158  0.311724  16.069593
+147     66  0.478441  24.586643
+2      102  0.209580  26.030343
+22     120  0.329446  27.743734
+148     67  0.075157  29.521161
+worst iou=
+      objId   meanIoU     meanDis
+117     39  0.002525  119.888764
+105     28  0.004893  326.000158
+162      7  0.005563  158.768482
+114     36  0.006944  163.908735
+133     53  0.007194  502.518385
+65      15  0.007353  182.560378
+76      16  0.007634  192.181803
+112     34  0.007856  338.214887
+54      14  0.008065  274.837277
+143     62  0.008323  128.246074
+worst distance=
+      objId   meanIoU     meanDis
+94      18  0.031843  681.014532
+42     139  0.011026  642.637283
+97      20  0.021491  513.078423
+133     53  0.007194  502.518385
+100     23  0.032247  483.226457
+21      11  0.034483  426.437242
+10      10  0.050000  386.852936
+51     147  0.049168  377.183754
+62     157  0.016165  369.557535
+36     133  0.143637  354.565719
+
+
+#MOT17-02-FRCNN
+best iou=
+     objId   meanIoU     meanDis
+64     69  0.523023   10.284808
+63     68  0.420504   10.739003
+77     80  0.250000   64.696268
+58     63  0.228288   13.149068
+76      7  0.141833   93.798218
+70     74  0.132100   37.905375
+6      16  0.085401  680.402234
+73     77  0.083333  105.672327
+5      15  0.078630   80.205857
+69     73  0.061554   70.271700
+best distance=
+     objId   meanIoU    meanDis
+64     69  0.523023  10.284808
+63     68  0.420504  10.739003
+58     63  0.228288  13.149068
+59     64  0.027940  24.319440
+70     74  0.132100  37.905375
+49     55  0.023414  63.730792
+77     80  0.250000  64.696268
+69     73  0.061554  70.271700
+67     71  0.017988  74.715707
+5      15  0.078630  80.205857
+worst iou=
+     objId   meanIoU     meanDis
+0      10  0.001667  149.903178
+65      6  0.001667  262.743045
+79      9  0.001667  240.124555
+7      17  0.001667  127.141091
+23     31  0.001667  215.524640
+22     30  0.001667  234.558863
+14     23  0.001809  690.585629
+32      3  0.001845  756.147893
+61     66  0.001880   97.942085
+9      19  0.001992  736.207826
+worst distance=
+     objId   meanIoU      meanDis
+21      2  0.017857  1171.805309
+29     37  0.003584   763.914744
+32      3  0.001845   756.147893
+9      19  0.001992   736.207826
+14     23  0.001809   690.585629
+11     20  0.003106   689.214030
+6      16  0.085401   680.402234
+33     40  0.002322   608.223009
+26     34  0.004032   572.425666
+25     33  0.003759   567.760812
+
+#MOT17-04-FRCNN
+best iou=
+      objId   meanIoU    meanDis
+40     139  0.956434   1.611293
+31     130  0.874320   4.243345
+42     140  0.860584   4.142638
+77      45  0.857875   5.294055
+16     116  0.780172   7.360580
+78      46  0.765151   7.803975
+104      6  0.731514   8.564759
+111     76  0.696620  22.035732
+82       4  0.677235  13.831328
+29     129  0.661909  15.556965
+best distance=
+      objId   meanIoU    meanDis
+40     139  0.956434   1.611293
+42     140  0.860584   4.142638
+31     130  0.874320   4.243345
+77      45  0.857875   5.294055
+16     116  0.780172   7.360580
+78      46  0.765151   7.803975
+104      6  0.731514   8.564759
+82       4  0.677235  13.831328
+117     81  0.613992  15.399903
+114     79  0.548472  15.453990
+worst iou=
+      objId   meanIoU     meanDis
+100     66  0.007195  727.575577
+12     111  0.007195  331.754863
+34     133  0.008089  313.329831
+7      107  0.010172  470.197604
+110     75  0.010475  575.124912
+109     74  0.012657  605.279244
+61       2  0.014697  428.098206
+135     98  0.016238  436.192008
+101     67  0.017782  377.082967
+25     124  0.022999  332.224132
+worst distance=
+      objId   meanIoU     meanDis
+100     66  0.007195  727.575577
+125     89  0.051858  688.266325
+109     74  0.012657  605.279244
+110     75  0.010475  575.124912
+6      106  0.040529  559.555941
+99      65  0.025292  499.430517
+136     99  0.115143  496.416125
+7      107  0.010172  470.197604
+97      63  0.056926  461.098358
+24     123  0.040404  456.121002
 """

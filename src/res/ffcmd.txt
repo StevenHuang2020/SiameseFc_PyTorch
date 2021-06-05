@@ -6,7 +6,7 @@ ffmpeg -i out.mp4 -r 1/1 ./outmp4/%03d.jpg  #decode 1 frame every 1s
 ffmpeg -i out.mp4 -s 640x360 -r 1/1 ./outmp4/%03d.jpg #with resolution
 
 
-/**encode images to video**/
+/**code images to video**/
 ffmpeg -framerate 30 -i ./img_camera/dstImg1/%06d.jpg -c:v libx264 -pix_fmt yuv420p img_camera_1out.mp4
 
 ffmpeg -framerate 30 -i ./img_camera2/dstImg1/%06d.jpg -c:v libx264 -pix_fmt yuv420p img_camera2_1out.mp4
@@ -15,6 +15,7 @@ ffmpeg -framerate 30 -i ./img_camera/combine/%06d.jpg -c:v libx264 -pix_fmt yuv4
 ffmpeg -framerate 30 -i ./data/MOT/MOT17_GT_Jason/MOT17-02-FRCNN/img1/%06d.jpg -c:v libx264 -pix_fmt yuv420p img_MOT17_02_GT_out.mp4
 ffmpeg -framerate 30 -i ./data/MOT/MOT17_GT_Jason/MOT17-02-FRCNN/img1_Pred/%06d.jpg -c:v libx264 -pix_fmt yuv420p img_MOT17_02_pred_out.mp4
 
+ffmpeg -framerate 30 -i ./data/MOT/MOT17_GT_Jason/MOT17-13-FRCNN/gtBoxImages/%06d.jpg -c:v libx264 -pix_fmt yuv420p img_MOT17_13_GT_out.mp4
 
 source： https://motchallenge.net/data/MOT17/    
 Name: MOT17-04-SDP

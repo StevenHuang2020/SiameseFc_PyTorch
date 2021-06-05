@@ -44,8 +44,10 @@ def checkData(seqs):
     print('len=', len(seqs))
     for img_files, anno in seqs:
         #print('images=',len(img_files), ',firstImage=',img_files[0],',anno=',anno.shape)
-        assert len(img_files) == len(anno)
         assert anno.shape[1] == 4
+        if len(img_files) != len(anno):
+            #print('images=',len(img_files), ',firstImage=',img_files[0],',anno=',anno.shape)
+            print('\nerror', 'images=',len(img_files), ', anno=',anno.shape)
         
 #usage: python train.py ultimate_lr=1e-7 epoch_num=10
 def main():

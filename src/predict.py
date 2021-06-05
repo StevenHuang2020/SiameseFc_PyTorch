@@ -197,7 +197,10 @@ def parseFileName(fileName):
     
 def gen_predictAll(imgesPath,gtFilesPath,predPath):        
     imgsAll = getFileList(imgesPath)
-    
+    #imgsAll = imgsAll[:300] #limit predict frame
+    #print(imgsAll)
+    #return
+
     if len(imgsAll)==0:
         print('warning, cant find images,path=', imgesPath)
     #print('len imgsAll=\n', len(imgsAll))
@@ -213,8 +216,10 @@ def gen_predictAll(imgesPath,gtFilesPath,predPath):
         print(i,'/',len(gtFlies), ' ', gt, fileName, objId,start,stop )
         startRect = np.loadtxt(gt, delimiter=',')[0]
         
-        # if start>=len(imgsAll):
-        #     continue 
+        if start>=len(imgsAll):
+            continue 
+        if stop>=len(imgsAll):
+            stop = len(imgsAll)
         
         imgs = imgsAll[start-1:stop]
         
@@ -225,20 +230,20 @@ def gen_predictAll(imgesPath,gtFilesPath,predPath):
         #break
         
 def genPredict_MOT17(name):
-    #imgesPath = os.path.abspath(r'.\data\MOT\MOT17\train\MOT17-02-FRCNN\img1')
-    #base = os.path.abspath(r'.\data\MOT\MOT17_GT_Jason\MOT17-02-FRCNN')
+    # imgesPath = os.path.abspath(r'.\data\MOT\MOT17\train\MOT17-02-FRCNN\img1')
+    # base = os.path.abspath(r'.\data\MOT\MOT17_GT_Jason\MOT17-02-FRCNN')
     
     #windows
-    imgesPath = os.path.abspath(r'.\data\MOT\MOT17\train\MOT17-04-FRCNN\img1')
-    base = os.path.abspath(r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN')
+    # imgesPath = os.path.abspath(r'.\data\MOT\MOT17\train\MOT17-04-FRCNN\img1')
+    # base = os.path.abspath(r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN')
     # imgesPath = os.path.abspath(r'data/MOT/MOT17/train/MOT17-04-FRCNN/img1')
     # base = os.path.abspath(r'data/MOT/MOT17_GT_Jason/MOT17-04-FRCNN')
     
     #imgesPath = os.path.abspath(r'data/MOT/MOT17/train/MOT17-04-FRCNN/img1')
     #base = os.path.abspath(r'data/MOT/MOT17_GT_Jason/MOT17-04-FRCNN')
     
-    #imgesPath = os.path.abspath(r'data/MOT/MOT17/train/MOT17-13-FRCNN/img1')
-    #base = os.path.abspath(r'data/MOT/MOT17_GT_Jason/MOT17-13-FRCNN')
+    imgesPath = os.path.abspath(r'data/MOT/MOT17/train/MOT17-13-FRCNN/img1')
+    base = os.path.abspath(r'data/MOT/MOT17_GT_Jason/MOT17-13-FRCNN')
     
     gtFilesPath = base
     predPath = os.path.join(base, 'predBoxFiles_' + name) #tracker.saveWeightFileName
@@ -268,10 +273,16 @@ def textFrameNo2Images(imgesPath, dstImgPath):
         #break
     
 def putRectToImgs(imgesPath, imgesDstPath, rtFilesPath, objIdFilters=[], delimiter=','):
+    """
+    filter obj not to rect to images
+    """
     imgsAll = getFileList(imgesPath)
     
     rtFiles = getFileList(rtFilesPath, 'txt')
     #print('imgsAll=\n', imgsAll)
+    #print('rtFiles=\n', rtFiles)
+    assert(imgsAll != [])
+    assert(rtFiles != [])
     for i, rtFile in enumerate(rtFiles):
         objId,start,stop = parseFileName(getFileNameNo(rtFile))
         if objId in objIdFilters:
@@ -286,13 +297,13 @@ def putRectToImgs(imgesPath, imgesDstPath, rtFilesPath, objIdFilters=[], delimit
         #print(colr,type(colr))
         rectImages(imgs,boxes,dst=imgesDstPath, color=colr, str='id:'+str(objId))
         #break
-
+    
 def checkGtObject():
     base = r'.\data\MOT\MOT17_GT_Jason\MOT17-02-FRCNN'
     imgesPath = r'.\data\MOT\MOT17\train\MOT17-02-FRCNN\img1'
     
-    #base = r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN'
-    #imgesPath = r'.\data\MOT\MOT17\train\MOT17-04-FRCNN\img1'
+    base = r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN'
+    imgesPath = r'.\data\MOT\MOT17\train\MOT17-04-FRCNN\img1'
     
     # base = r'.\data\MOT\MOT17_GT_Jason\MOT17-05-FRCNN'
     # imgesPath = r'.\data\MOT\MOT17\train\MOT17-05-FRCNN\img1'
@@ -300,8 +311,8 @@ def checkGtObject():
     # base = r'.\data\MOT\MOT17_GT_Jason\MOT17-09-FRCNN'
     # imgesPath = r'.\data\MOT\MOT17\train\MOT17-09-FRCNN\img1'
     
-    base = r'.\data\MOT\MOT17_GT_Jason\MOT17-10-FRCNN'
-    imgesPath = r'.\data\MOT\MOT17\train\MOT17-10-FRCNN\img1'
+    # base = r'.\data\MOT\MOT17_GT_Jason\MOT17-10-FRCNN'
+    # imgesPath = r'.\data\MOT\MOT17\train\MOT17-10-FRCNN\img1'
     
     # base = r'.\data\MOT\MOT17_GT_Jason\MOT17-11-FRCNN'
     # imgesPath = r'.\data\MOT\MOT17\train\MOT17-11-FRCNN\img1'
@@ -333,12 +344,15 @@ def checkGtObject():
         img = textImg(img, str(objId), loc=(int(x0),int(y0)), color=color)
         
         #showimage(img)
-        fDst = dst + '\\' + '{:06}_obj_{}.jpg'.format(start,objId)
+        fDst = dst + '\\' + '{}_obj_{:06}.jpg'.format(objId,start)
         #print('fDst=', fDst)
         writeImg(img,fDst)
         #break
     
 def genBoxImg_MOT17():
+    '''
+    put all obj's rect to imgs,except obj in filters
+    '''
     objIdFilters = []
     delimiter = ' ' #predict is NUll, gt is ','
     if 0:
@@ -350,7 +364,7 @@ def genBoxImg_MOT17():
         gtFilesPath = os.path.join(base,'pred')
         
         imgesDstPath = imgesPath
-    elif 1:
+    elif 0:
         base = r'.\data\MOT\MOT17_GT_Jason\MOT17-13-FRCNN'
         #imgesPath = os.path.join(base,'gtIndexImages')
         if 0:
@@ -360,7 +374,7 @@ def genBoxImg_MOT17():
             createPath(imgesDstPath)
             imgesPath = imgesDstPath
         else:
-            imgesPath = os.path.join(base,'img1_Pred')
+            imgesPath = os.path.join(base,'img1_Pred1')
             gtFilesPath = os.path.join(base,'predBoxFiles_siamfc_Con2Net__BalancedLoss_e') 
             imgesDstPath = imgesPath
         #imgesIndexDstPath = os.path.join(base,'gtIndexImages')
@@ -374,8 +388,8 @@ def genBoxImg_MOT17():
             172,112,174,113,27,117,114,173,118,98,115,77,130,84,78] #no pedestrains
     elif 0:
         base = r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN' #imgesPath == imgesDstPath to overlap preds
-        imgesPath = os.path.join(base,'img1_Pred')
-        gtFilesPath = os.path.join(base,'predBoxFiles_alexnet_e754') 
+        imgesPath = os.path.join(base,'img1_Pred1')
+        gtFilesPath = os.path.join(base,'predBoxFiles_siamfc_alexnet_e754') 
         imgesDstPath = imgesPath
               
         #imgesIndexDstPath = os.path.join(base,'gtBoxImages')
@@ -390,44 +404,116 @@ def genBoxImg_MOT17():
         # imgesPath = os.path.join(base,'img1')
         # gtFilesPath = base
         # delimiter = ','
-        imgesPath = os.path.join(base,'gtBoxImages')
-        gtFilesPath = os.path.join(base,'predBoxFiles') 
-        imgesDstPath = os.path.join(base,'img1_Pred') 
+        imgesPath = os.path.join(base,'img1_Pred1')
+        gtFilesPath = os.path.join(base,'predBoxFiles_old') 
+        imgesDstPath = os.path.join(base,'img1_Pred1') 
         createPath(imgesDstPath)
-        imgesIndexDstPath = os.path.join(base,'gtBoxImages')
-        createPath(imgesIndexDstPath)
+        #imgesIndexDstPath = os.path.join(base,'gtBoxImages')
+        #createPath(imgesIndexDstPath)
        
         objIdFilters = [4,50,51,52,53,79,75] #no pedestrains
     
-    #checkGtObject()
+    checkGtObject()
     #textFrameNo2Images(imgesPath,dstImgPath=imgesIndexDstPath)
-    putRectToImgs(imgesPath, imgesDstPath, gtFilesPath, objIdFilters, delimiter=delimiter)
+    #putRectToImgs(imgesPath, imgesDstPath, gtFilesPath, objIdFilters, delimiter=delimiter)
     
-def genBoxImgCompare_MOT17():
-    base = r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN'
-    imgesPath = base + r'\\img1_Copy'
+def genBoxImg_Objs():
+    '''
+    put specific obj's rect to imgs
+    '''
+    objIdFilters = []
+    delimiter = ' ' #predict is NUll, gt is ','
     
-    gtRtFile = base + r'\\objID_2_1_680.txt'
-    predRtFile = base + r'\\predBoxFiles\\objID_2_1_680_pred.txt'
-    imgesDstPath = base + r'\\img1_PredCompare'
-    objId = 2
+    base = r'.\data\MOT\MOT17_GT_Jason\MOT17-13-FRCNN'
+    #imgesPath = os.path.join(base,'gtIndexImages')
     
-    createPath(imgesDstPath)
-       
+    imgesPath = os.path.join(base,'img1_pred1')
+    gtFilesPath = os.path.join(base,'predBoxFiles_siamfc_Con2Net__BalancedLoss_e') 
+    imgesDstPath = imgesPath
+    #imgesIndexDstPath = os.path.join(base,'gtIndexImages')
+    #createPath(imgesIndexDstPath)
+    
+    objIdFilters = [175,185,99,44,140,107,113,159,103,66] #pedestrains
+    putRectToImgsCust(imgesPath, imgesDstPath, gtFilesPath, objIdFilters, delimiter=delimiter)
+    
+    
+def getRtFile(objId, filePath):
+    for f in pathsFiles(filePath,'txt'):
+        id,start,stop = parseFileName(getFileNameNo(f))
+        if id == objId:
+            return f, id,start,stop
+    return None,None,None,None
+    
+def genBoxImgCompare(imgesPath,imgesDstPath,objIds, rtFilePath, delimiter=',',color = (0,0,255)):
+    """
+    delimiter: gt:',' pre:' '
+    color: colrGt = (0,0,255)  #bgr red colrPred = (0,255,0) #green
+    """
     imgs = getFileList(imgesPath)
-    
-    gtBoxes = np.loadtxt(gtRtFile, delimiter=',')
-    predBoxes = np.loadtxt(predRtFile, delimiter=' ')
-    
-    colrGt = (0,0,255)  #bgr red
-    colrPred = (0,255,0) #green
+    for objId in objIds:
+        rtFile,id,start,stop = getRtFile(objId, rtFilePath)   #base + r'\\objID_2_1_680.txt'
+        if rtFile is None:
+            print('warning, rtFile cannt find! id', objId)
+            continue
+                
+        boxes = np.loadtxt(rtFile, delimiter=delimiter)
+        print('start to draw rect images, id:', objId,'startFrame:', start,'stopFrame:', stop)
+        rectImages(imgs, boxes, dst=imgesDstPath, color=color, str='id:'+str(objId))
 
-    print('start to draw groud true rect images...')
-    rectImages(imgs, gtBoxes, dst=imgesDstPath, color=colrGt, str='id:'+str(objId))
+def putRectToImgsCust(imgesPath, imgesDstPath, rtFilesPath, objIds=[], delimiter=','):
+    """
+    filter obj to rect to images
+    """
+    if 1:
+        colr = (np.random.randint(256), np.random.randint(256), np.random.randint(256)) 
+        genBoxImgCompare(imgesPath,imgesDstPath,objIds, rtFilesPath, delimiter=delimiter,color = colr)
+    else:
+        imgsAll = getFileList(imgesPath)
+        rtFiles = getFileList(rtFilesPath, 'txt')
+        #print('imgsAll=\n', imgsAll)
+        for i, rtFile in enumerate(rtFiles):
+            objId,start,stop = parseFileName(getFileNameNo(rtFile))
+            if objId in objIds:
+                print(str(i) + '/' + str(len(rtFiles)), rtFile, objId, start, stop)
+                #predFile = predFilesPath + '\\' + getFileNameNo(rtFile) + '_pred.txt'
+                imgs = imgsAll[start-1:stop]
+                
+                boxes = np.loadtxt(rtFile, delimiter=delimiter)
+                colr = (np.random.randint(256), np.random.randint(256), np.random.randint(256)) #(100,0,0)#(colr[0],colr[1],colr[2]) #
+                #print(colr,type(colr))
+                rectImages(imgs,boxes,dst=imgesDstPath, color=colr, str='id:'+str(objId))
+            #break
+                
+def genBoxImgCompare_MOT17():
+    # base = r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN'
+    # imgesPath = base + r'\\img1_pred1'
+    # predRtFilePath = os.path.join(base, 'predBoxFiles_siamfc_Con2Net_BalancedLoss_e')
+    # objIds = [1,2,3,4]
+    #objIds = [7,139,24,59,12,18,54,39,25,28]#best
+    #objIds = [14,52,13,66,111,133,107,75,74]#worst
     
-    print('start to draw pred rect images...')
-    imgs = getFileList(imgesDstPath)    
-    rectImages(imgs, predBoxes, dst=imgesDstPath, color=colrPred, str='id:'+str(objId))
+    base = r'.\data\MOT\MOT17_GT_Jason\MOT17-13-FRCNN'
+    imgesPath = base + r'\\img1_pred2'
+    predRtFilePath = os.path.join(base, 'predBoxFiles_siamfc_Con2Net__BalancedLoss_e')
+    objIds = [140,44,107,101,109]#best
+    objIds = [34,62,15] #[39,28,7,36,53,15,16,34,14,62]#worst
+    #objIds = [30,24,18,21,33,40,42,43]#self
+    
+    # base = r'.\data\MOT\MOT17_GT_Jason\MOT17-04-FRCNN'
+    # imgesPath = base + r'\\img1_pred1'
+    # predRtFilePath = os.path.join(base, 'predBoxFiles_siamfc_Con2Net_BalancedLoss_e')
+    # objIds = [139,130,6,76,4] #[48,7,9,29,55]
+
+    imgesDstPath = imgesPath
+    createPath(imgesDstPath)
+    gtRtFilePath = base 
+    
+    
+    print('start to draw gt rect to images...')
+    genBoxImgCompare(imgesPath,imgesDstPath,objIds, gtRtFilePath, delimiter=',',color = (0,0,255))
+    print('start to draw pred rect to images...')
+    genBoxImgCompare(imgesPath,imgesDstPath,objIds, predRtFilePath, delimiter=' ',color = (0,255,0))
+      
     
 def visualTracker(tracker):
     from siamfc.backbones import AlexNetV1,Con2Net,Con8Net
@@ -466,11 +552,13 @@ def visualTracker(tracker):
 
 
 if __name__ == '__main__':
-    net_path = os.path.expanduser(r'./pretrained/siamfc_alexnet_e754.pth')
+    #net_path = os.path.expanduser(r'./pretrained/siamfc_alexnet_e754.pth')
+    #net_path = os.path.expanduser(r'./pretrained/siamfc_alexnet_e654.pth')
     #net_path = os.path.expanduser(r'./pretrained/siamfc_alexnet_e50.pth')
+    
     #net_path = os.path.expanduser(r'./pretrained/siamfc_AlexNetV1_FocalLoss_e713.pth')
     
-    #net_path = os.path.expanduser(r'./pretrained/siamfc_Con2Net_BalancedLoss_e860.pth')
+    net_path = os.path.expanduser(r'./pretrained/siamfc_Con2Net_BalancedLoss_e860.pth')
     #net_path = os.path.expanduser(r'./pretrained/siamfc_Sequential_vgg19_BalancedLoss_e801.pth')
     #net_path = os.path.expanduser(r'./pretrained/siamfc_Sequential_vgg19_FocalLoss_e211.pth')
     #net_path = os.path.expanduser(r'./pretrained/siamfc_Sequential_MobileNet_BalancedLoss_e601.pth')
@@ -491,9 +579,10 @@ if __name__ == '__main__':
     #visualTracker(tracker)
     
     #genBoxImg_MOT17()  #gen rect to images by predicted box files
-    #genBoxImgCompare_MOT17()
+    genBoxImgCompare_MOT17()
+    #genBoxImg_Objs()
     
     #genPredictAllObjs()
     #genPredict()        #gen predict one object boxes
     
-    genPredict_MOT17(netWeightsName) #gen predict boxes
+    #genPredict_MOT17(netWeightsName) #gen predict boxes

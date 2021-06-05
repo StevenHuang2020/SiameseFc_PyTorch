@@ -38,7 +38,7 @@ class BCELoss(nn.Module):
         #input = torch.where(input > 0.5, 1, 0)
         #target = torch.where(target > 0.5, 1, 0)
         #return F.binary_cross_entropy(input, target)
-        return F.binary_cross_entropy_with_logits(input, target, reduction='mean')
+        return F.binary_cross_entropy_with_logits(input, target, reduction='sum')#mean
         
 class BalancedLoss(nn.Module):
 
@@ -61,7 +61,7 @@ class BalancedLoss(nn.Module):
             weight[neg_mask] = 0.5 / neg_num
 
         return F.binary_cross_entropy_with_logits(
-            input, target, weight, reduction='mean')
+            input, target, weight, reduction='sum')
 
 
 class FocalLoss(nn.Module):
@@ -84,7 +84,7 @@ class FocalLoss(nn.Module):
         avg_weight = target * pos_weight + (1 - target) * neg_weight
         loss /= avg_weight.mean()
 
-        return loss.mean()#loss.sum() #
+        return loss.sum() #loss.mean()#
 
 
 class GHMCLoss(nn.Module):

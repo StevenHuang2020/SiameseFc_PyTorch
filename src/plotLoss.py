@@ -28,6 +28,9 @@ def getLoss(log_file,startIter=0,stopIter=None):
                 #print('loss,acc=',iterLine[7],iterLine[10],'val_loss,val_acc=',iterLine[13],iterLine[16])
                 loss.append(float(lossStr))
                
+                if stopIter and epoch>=stopIter:
+                    break
+                
     return iters,loss
 
 def plotLoss(ax, iters, loss, label=None):
@@ -42,7 +45,7 @@ def argCmdParse():
     
     return parser.parse_args()
 
-def plotCompareLoss(lossFiles):
+def plotCompareLoss(lossFiles, stopEpoch=None):
     print(lossFiles)
     ax = plt.subplot(1,1,1)
     # labels=['BCELoss', 'BalancedLoss', 'FocalLoss']
@@ -51,7 +54,7 @@ def plotCompareLoss(lossFiles):
     #     plotLoss(ax, iters, loss, label=labels[i])
     
     for file,name in lossFiles:
-        iters,loss = getLoss(file,0,None)
+        iters,loss = getLoss(file,0,stopEpoch)
         plotLoss(ax, iters, loss, label=name)
         
     ax.set_xlabel('Epoch')
@@ -78,18 +81,18 @@ def main():
         
     logs=[]
     base = r'.\log\new'
-    file = os.path.join(base, 'log_siamfc_Sequential_AlexNet_BCELoss_e.txt')
-    name = 'BCE Loss';      logs.append((file,name))
+    #file = os.path.join(base, 'log_siamfc_Sequential_AlexNet_BCELoss_e.txt')
+    #name = 'BCE Loss';      logs.append((file,name))
     
-    file = os.path.join(base, 'log_siamfc_Sequential_AlexNet_BalancedLoss_e.txt')
+    file = os.path.join(base, 'log_siamfc_Con2Net__BalancedLoss_e.txt')
     name = 'Balanced BCE Loss';     logs.append((file,name))
     
-    file = os.path.join(base, 'log_siamfc_Sequential_AlexNet_FocalLoss_e.txt')
-    name = 'Focal Loss';    logs.append((file,name))
+    #file = os.path.join(base, 'log_siamfc_Sequential_AlexNet_FocalLoss_e.txt')
+    #name = 'Focal Loss';    logs.append((file,name))
     
-    #plotCompareLoss(logs)
-    for i in logs:
-        plotCompareLoss([i])
+    plotCompareLoss(logs, stopEpoch=300)
+    # for i in logs:
+    #     plotCompareLoss([i],stopEpoch=200)
 
     
 if __name__ == "__main__":

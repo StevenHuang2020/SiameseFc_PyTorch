@@ -324,9 +324,9 @@ class TrackerSiamFC(Tracker):
             
             if backward:
                 # back propagation
-                #self.optimizer.zero_grad()
+                self.optimizer.zero_grad()
                 loss.backward()
-                #self.optimizer.step()
+                self.optimizer.step()
         
         return loss.item()
 
@@ -361,16 +361,16 @@ class TrackerSiamFC(Tracker):
         for epoch in range(self.cfg.epoch_num):
             t = time.time()
             
-            self.optimizer.zero_grad()
-            self.optimizer.step()
+            #self.optimizer.zero_grad()
+            #self.optimizer.step()
             # update lr at each epoch
-            self.lr_scheduler.step() #epoch=epoch
-
+           
             epoch = self.curEpoch + epoch
             # loop over dataloader
             for it, batch in enumerate(dataloader):
                 loss = self.train_step(batch, backward=True)
                 
+            self.lr_scheduler.step() #epoch=epoch    
             #log = 'Epoch({}/{}):total({}) [{}/{}] Loss: {:.5f}'.format(epoch + 1 - self.curEpoch, self.cfg.epoch_num, epoch + 1, it + 1, len(dataloader), loss)
             log = 'Epoch({}/{}):total({})[{}/{}],Loss:{:.10f}, run in {:.2f}s'.format(epoch + 1 - self.curEpoch, self.cfg.epoch_num, epoch + 1, it + 1, len(dataloader), loss, time.time()-t)
             print(log)

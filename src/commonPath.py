@@ -13,7 +13,7 @@ def pathsFileFolders(path,subFolder=False):
         if not subFolder:
             break
             
-def pathsFiles(dir,filter='',subFolder=False): #"cpp h txt jpg"
+def pathsFiles(dir, filter='',subFolder=False): #"cpp h txt jpg"
     def getExtFile(file):
         return file[file.find('.')+1:]
     

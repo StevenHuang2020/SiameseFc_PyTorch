@@ -20,7 +20,7 @@ def plotSub(x,y,ax=None, aspect=False, label='', linestyle='solid', marker='',
     #ax.title.set_text(name)
     if aspect:
         ax.set_aspect(1)
-    ax.legend()
+    #ax.legend()
 
 def scatterSub(x,y,ax=None,label='',marker='.'):
     ax.scatter(x,y,linewidths=.3, label=label, marker=marker)
