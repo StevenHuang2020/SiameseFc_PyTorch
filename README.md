@@ -19,13 +19,13 @@ FC Siamese network [paper.](https://arxiv.org/pdf/1606.09549.pdf)
  <!-- Distance=%20\sqrt{(x_{gt}-x_{pred})^2+(y_{gt}-y_{pred})^2} -->
  <!-- Distance=%20\|C_{gt}-C_{pred} \|_{2} -->
  
-## IoU/Precision plot
+ - IoU/Precision plot
 |||
 |---|---|
 |<img src="src/res/prAlg.png" width="320" height="240" />|<img src="src/res/srAlg.png" width="320" height="240" />|
-|<img src="src/res/PrecisonPlot.png" width="320" height="240" />|<img src="src/res/IoUPlot.png" width="320" height="240" />|
 
-## Tracking effect
+## Tracking effect|<img src="src/res/PrecisonPlot.png" width="320" height="240" />|<img src="src/res/IoUPlot.png" width="320" height="240" />|
+
 |||
 |---|---|
 |<img src="src/res/Figure_1.png" width="240" height="135" />|<img src="src/res/Figure_2.png" width="240" height="135" />|
